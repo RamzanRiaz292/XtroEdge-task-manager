@@ -1,0 +1,805 @@
+<div class="manager-tasks-container">
+  <!-- Header -->
+  <div class="header-bar">
+    <div class="header-content">
+      <h1>👨‍💼 Manager Dashboard</h1>
+      <div class="user-info">
+        <span>Welcome, {{ user?.name }} (Manager)</span>
+        <button (click)="logout()" class="btn btn-logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-info">
+          <h3>Total Employees</h3>
+          <span class="stat-number">{{ employees.length }}</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-info">
+          <h3>Total Tasks</h3>
+          <span class="stat-number">{{ totalTasks }}</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-info">
+          <h3>Pending Tasks</h3>
+          <span class="stat-number">{{ pendingTasks }}</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-info">
+          <h3>Completed</h3>
+          <span class="stat-number">{{ completedTasks }}</span>
+        </div>
+      </div>
+      <!-- progress -->
+      <div class="stat-card pending-tasks">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-info">
+          <h3>In Progress</h3>
+          <span class="stat-number">{{ inProgressTasks }}</span>
+        </div>
+      </div>
+      <!-- View All Tasks -->
+      <div class="stat-card" (click)="navigateTo('/tasks')" style="cursor: pointer;">
+        <div class="stat-icon">📋</div>
+        <div class="stat-info">
+          <h3>View All Tasks</h3>
+          <span class="stat-number"></span>
+          <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+            Manage your assigned tasks
+          </small>
+        </div>
+        <!-- <div class="stat-link" style="margin-left: auto; color: #007bff;">
+          <i class="fas fa-external-link-alt" style="font-size: 16px;"></i>
+        </div> -->
+      </div>
+      <!-- Employee Analytics -->
+      <div class="stat-card" (click)="navigateTo('/employee-analytics')" style="cursor: pointer;">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-info">
+          <h3>Employee Analytics</h3>
+          <span class="stat-number"></span>
+          <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+            Performance analytics dashboard
+          </small>
+        </div>
+        <!-- <div class="stat-link" style="margin-left: auto; color: #007bff;">
+          <i class="fas fa-external-link-alt" style="font-size: 16px;"></i>
+        </div> -->
+      </div>
+
+
+      <!-- Progress -->
+      <div class="stat-card" (click)="navigateToProgress()" style="cursor: pointer;">
+        <div class="stat-icon">📊</div>
+        <div class="stat-info">
+          <h3>Progress</h3>
+          <span class="stat-number"></span>
+          <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+            Completed Tasks
+          </small>
+        </div>
+        <div class="stat-link" style="margin-left: auto; color: #007bff;">
+          <i class="fas fa-external-link-alt" style="font-size: 16px;"></i>
+        </div>
+      </div>
+
+
+
+      <!-- Calendar View -->
+      <div class="stat-card" (click)="navigateTo('/calendar')" style="cursor: pointer;">
+        <div class="stat-icon">📅</div>
+        <div class="stat-info">
+          <h3>Calendar View</h3>
+          <span class="stat-number"></span>
+          <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+            See tasks on calendar
+          </small>
+        </div>
+        <!-- <div class="stat-link" style="margin-left: auto; color: #007bff;">
+          <i class="fas fa-external-link-alt" style="font-size: 16px;"></i>
+        </div> -->
+      </div>
+      <!-- Dashboard -->
+      <div class="stat-card" (click)="navigateToDashboard()" style="cursor: pointer;">
+        <div class="stat-icon">📊</div>
+        <div class="stat-info">
+          <h3>Dashboard</h3>
+          <span class="stat-number"></span>
+          <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+            Completed Tasks
+          </small>
+        </div>
+        <!-- <div class="stat-link" style="margin-left: auto; color: #007bff;">
+          <i class="fas fa-external-link-alt" style="font-size: 16px;"></i>
+        </div> -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main Content Tabs -->
+  <div class="tabs-section">
+    <div class="tabs-header">
+      <button class="tab-btn" [class.active]="activeTab === 'employees'" (click)="activeTab = 'employees'">
+        👥 Manage Employees
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'tasks'" (click)="activeTab = 'tasks'">
+        📋 Assign Tasks
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'view-tasks'" (click)="activeTab = 'view-tasks'">
+        📅 Calendar View
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'all-tasks'" (click)="activeTab = 'all-tasks'">
+        👀 View All Tasks
+      </button>
+    </div>
+
+    <!-- Employees Tab -->
+    <div *ngIf="activeTab === 'employees'" class="tab-content">
+      <div class="section-header">
+        <h2>Employee Management</h2>
+        <button class="btn btn-primary" (click)="openEmployeeModal()">
+          ➕ Add New Employee
+        </button>
+      </div>
+
+      <!-- Employees List -->
+      <div class="employees-list">
+        <div *ngFor="let employee of employees" class="employee-card">
+          <div class="employee-info">
+            <div class="employee-avatar">
+              {{ employee.name.charAt(0).toUpperCase() }}
+            </div>
+            <div class="employee-details">
+              <h4>{{ employee.name }}</h4>
+              <p class="employee-email">{{ employee.email }}</p>
+              <span class="employee-role">Employee</span>
+            </div>
+          </div>
+          <div class="employee-meta">
+            <span class="join-date">
+              Joined: {{ employee.created_at | date:'mediumDate' }}
+            </span>
+          </div>
+        </div>
+
+        <div *ngIf="employees.length === 0" class="empty-state">
+          <p>No employees found. Add your first employee!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assign Tasks Tab -->
+    <div *ngIf="activeTab === 'tasks'" class="tab-content">
+      <div class="section-header">
+        <h2>Assign New Task</h2>
+      </div>
+
+      <!-- Task Assignment Form -->
+      <div class="task-form-card">
+        <form #taskForm="ngForm" (ngSubmit)="assignTask()">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="title">Task Title *</label>
+              <input type="text" id="title" name="title" [(ngModel)]="newTask.title" class="form-control"
+                placeholder="Enter task title" required>
+            </div>
+
+            <div class="form-group">
+              <label for="assigned_to">Assign To *</label>
+              <select id="assigned_to" name="assigned_to" [(ngModel)]="newTask.assigned_to" class="form-control"
+                required>
+                <option value="">Select Employee</option>
+                <option *ngFor="let emp of employees" [value]="emp.id">
+                  {{ emp.name }} ({{ emp.email }})
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" [(ngModel)]="newTask.description" class="form-control"
+              placeholder="Task description" rows="3"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="priority">Priority</label>
+              <select id="priority" name="priority" [(ngModel)]="newTask.priority" class="form-control">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="due_date">Due Date *</label>
+              <input type="datetime-local" id="due_date" name="due_date" [(ngModel)]="newTask.due_date"
+                class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label for="estimated_hours">Estimated Hours</label>
+              <input type="number" id="estimated_hours" name="estimated_hours" [(ngModel)]="newTask.estimated_hours"
+                class="form-control" min="1" max="100" value="1">
+            </div>
+          </div>
+
+          <!-- Project & Client Name Fields -->
+          <div class="project-client-section">
+            <h4 class="section-title">📁 Project Information</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="project_name">Project Name</label>
+                <input type="text" id="project_name" name="project_name" [(ngModel)]="newTask.project_name"
+                  class="form-control" placeholder="Enter project name (e.g., Website Redesign)">
+              </div>
+
+              <div class="form-group">
+                <label for="client_name">Client Name</label>
+                <input type="text" id="client_name" name="client_name" [(ngModel)]="newTask.client_name"
+                  class="form-control" placeholder="Enter client name (e.g., ABC Company)">
+              </div>
+            </div>
+
+            <!-- Preview -->
+            <div *ngIf="newTask.project_name || newTask.client_name" class="project-preview">
+              <span class="preview-icon">📁</span>
+              <span class="preview-text">
+                <strong>{{ newTask.project_name || 'No Project' }}</strong>
+                <span *ngIf="newTask.client_name"> | Client: {{ newTask.client_name }}</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" [disabled]="!taskForm.valid">
+              📤 Assign Task
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="resetTaskForm()">
+              🔄 Clear
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Calendar View Tab -->
+    <!-- Calendar View Tab -->
+    <div *ngIf="activeTab === 'view-tasks'" class="tab-content">
+      <div class="section-header">
+        <h2>📅 Weekly Calendar View</h2>
+        <div class="calendar-info">
+          <p class="info-text">Click on any employee to view their tasks for that day</p>
+        </div>
+      </div>
+
+      <!-- Calendar View -->
+      <div class="calendar-view">
+        <h3 class="calendar-title">Current Week: Monday to Sunday</h3>
+
+        <div class="calendar-grid">
+          <div *ngFor="let day of calendarDays" class="calendar-day-card" [class.today]="isToday(day)"
+            [class.past]="isPastDate(day)" [class.future]="isFutureDate(day)">
+
+            <!-- New Two-Side Layout -->
+            <div class="day-header-two-sides">
+              <!-- Left Side - Complete Date -->
+              <div class="date-left-side">
+                <div *ngIf="isToday(day)" class="today-badge-large">Today</div>
+                <h4 class="full-date">{{ formatFullDate(day) }}</h4>
+              </div>
+
+              <!-- Right Side - Task Statistics -->
+              <div class="date-right-side">
+                <!-- <div class="task-stats-circle">
+                  <span class="total-tasks-number">{{ getTasksForDate(day).length }}</span>
+                  <span class="total-tasks-label">Total Tasks</span>
+                </div> -->
+                <div class="completion-ratio">
+                  {{ getCompletedTasksForDate(day) }}/{{ getTasksForDate(day).length }}
+                  <span class="ratio-label">Completed</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Section - 4 Stats Boxes -->
+            <div class="day-stats-grid">
+              <div class="stat-box total-box">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                  <div class="stat-number">{{ getTasksForDate(day).length }}</div>
+                  <div class="stat-label">Total Tasks</div>
+                </div>
+              </div>
+
+              <div class="stat-box pending-box">
+                <div class="stat-icon">⏰</div>
+                <div class="stat-content">
+                  <div class="stat-number">{{ getPendingTasksForDate(day) }}</div>
+                  <div class="stat-label">Pending</div>
+                </div>
+              </div>
+
+              <div class="stat-box progress-box">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-content">
+                  <div class="stat-number">{{ getInProgressTasksForDate(day) }}</div>
+                  <div class="stat-label">In Progress</div>
+                </div>
+              </div>
+
+              <div class="stat-box completed-box">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                  <div class="stat-number">{{ getCompletedTasksForDate(day) }}</div>
+                  <div class="stat-label">Completed</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Employees with tasks for this day -->
+            <div class="day-employees">
+              <h5 class="employees-title">👥 Employees with Tasks</h5>
+              <div *ngFor="let employee of getEmployeesWithTasks(day)" class="employee-task-item"
+                (click)="showEmployeeDetails(employee, day)">
+
+                <div class="employee-avatar-small">
+                  {{ employee.name.charAt(0).toUpperCase() }}
+                </div>
+
+                <div class="employee-task-info">
+                  <div class="employee-name">{{ employee.name }}</div>
+                  <div class="employee-task-stats">
+                    <span class="task-stat completed">
+                      ✅ {{ getEmployeeTaskStats(employee.id, day).completedCount }}
+                    </span>
+                    <span class="task-stat pending">
+                      ⏳ {{ getEmployeeTaskStats(employee.id, day).pendingCount }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="click-indicator">
+                  <span class="click-text">View Tasks</span>
+                </div>
+              </div>
+
+              <div *ngIf="getEmployeesWithTasks(day).length === 0" class="no-tasks">
+                <div class="no-tasks-icon">📭</div>
+                <p>No tasks scheduled</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- View All Tasks Tab -->
+    <div *ngIf="activeTab === 'all-tasks'" class="tab-content">
+      <div class="section-header">
+        <h2>📋 All Tasks Overview</h2>
+        <div class="filter-controls-row">
+          <div class="filter-group">
+            <label>Filter by Status:</label>
+            <select class="form-control" [(ngModel)]="taskFilter" (change)="applyAllFilters()">
+              <option value="all">All Tasks</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Filter by Employee:</label>
+            <select class="form-control" [(ngModel)]="selectedEmployeeFilter" (change)="applyAllFilters()">
+              <option value="all">All Employees</option>
+              <option *ngFor="let emp of employees" [value]="emp.id">
+                {{ emp.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Time Range:</label>
+            <select class="form-control" [(ngModel)]="timeRangeFilter" (change)="applyAllFilters()">
+              <option value="lifetime">Lifetime</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="year">Last 365 Days</option>
+            </select>
+          </div>
+
+          <div class="filter-stats" *ngIf="selectedEmployeeFilter !== 'all'">
+            <div class="employee-quick-stats">
+              <span class="stat-badge completed">
+                ✅ {{ getFilteredEmployeeCompletedTasks() }} Completed
+              </span>
+              <span class="stat-badge pending">
+                ⏳ {{ getFilteredEmployeePendingTasks() }} Pending
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks Grid -->
+      <div class="tasks-grid">
+        <div *ngFor="let task of filteredTasks" class="task-card" [ngClass]="getStatusClass(task.status)">
+          <div class="task-header">
+            <h4 class="task-title">{{ task.title }}</h4>
+            <div class="task-meta">
+              <span class="priority-badge" [ngClass]="getPriorityClass(task.priority)">
+                {{ task.priority }}
+              </span>
+              <span class="status-badge" [ngClass]="getStatusClass(task.status)">
+                {{ task.status }}
+              </span>
+              <span *ngIf="task.is_overdue" class="status-badge status-overdue">
+                ⚠️ Overdue
+              </span>
+            </div>
+          </div>
+
+          <!-- Project & Client Badge -->
+          <div *ngIf="task.project_name || task.project_client" class="project-client-badge">
+            <span class="badge-icon">📁</span>
+            <div class="badge-content">
+              <span class="project-name" *ngIf="task.project_name">{{ task.project_name }}</span>
+              <span class="client-name" *ngIf="task.project_client">Client: {{ task.project_client }}</span>
+            </div>
+          </div>
+
+          <div class="task-description">
+            {{ task.description || 'No description provided' }}
+          </div>
+
+          <div class="task-details">
+            <div class="detail-item">
+              <strong>👤 Assigned To:</strong>
+              <h5 class="employee-link" (click)="showEmployeeTaskDetails(task.assigned_to)">
+                {{ task.assigned_to_name }}
+              </h5>
+            </div>
+            <div class="detail-item">
+              <strong>📅 Due Date:</strong> {{ task.due_date | date:'medium' }}
+            </div>
+            <!-- <div class="detail-item">
+              <strong>⏱️ Estimated:</strong> {{ task.estimated_hours }} hours
+            </div> -->
+            <!-- <div class="detail-item">
+              <strong>📊 Progress:</strong> {{ task.progress_percent }}%
+            </div> -->
+            <!-- <div class="detail-item">
+              <strong>🕒 Time Spent:</strong> {{ task.time_spent || 0 }} hours
+            </div> -->
+            <!-- <div *ngIf="task.time_remaining !== undefined" class="detail-item">
+              <strong>⏰ Time Remaining:</strong> 
+              <span [class.overdue-text]="task.is_overdue">
+                {{ formatTimeRemaining(task.time_remaining) }}
+              </span>
+            </div> -->
+          </div>
+
+          <div class="task-actions">
+            <!-- <button class="btn btn-sm btn-outline" (click)="viewTaskProgress(task)">
+              📊 View Progress
+            </button> -->
+            <button class="btn btn-sm btn-danger" (click)="deleteTask(task)">
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="filteredTasks.length === 0" class="empty-state">
+          <div *ngIf="selectedEmployeeFilter !== 'all' || taskFilter !== 'all' || timeRangeFilter !== 'lifetime'"
+            class="no-tasks-filtered">
+            <div class="no-tasks-icon">🔍</div>
+            <p>No tasks found for the selected filters.</p>
+            <p class="sub-text">Try changing the filters</p>
+          </div>
+          <div *ngIf="selectedEmployeeFilter === 'all' && taskFilter === 'all' && timeRangeFilter === 'lifetime'">
+            <p>No tasks found. Start by assigning tasks to employees.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee Task Details Modal for Calendar View -->
+  <div *ngIf="showEmployeeDetailsModal && selectedEmployeeTasks" class="manager-modal-overlay">
+    <div class="manager-modal employee-details-modal">
+      <div class="modal-header">
+        <h3>👤 {{ selectedEmployeeTasks.employee.name }} - Tasks for {{ formatDate(selectedEmployeeTasks.selectedDate)
+          }}</h3>
+        <button class="close-btn" (click)="closeEmployeeDetailsModal()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Employee Summary -->
+        <div class="employee-summary">
+          <div class="employee-info-header">
+            <div class="employee-avatar-large">
+              {{ selectedEmployeeTasks.employee.name.charAt(0).toUpperCase() }}
+            </div>
+            <div class="employee-info">
+              <h4>{{ selectedEmployeeTasks.employee.name }}</h4>
+              <p class="employee-email">{{ selectedEmployeeTasks.employee.email }}</p>
+            </div>
+          </div>
+
+          <div class="summary-stats">
+            <div class="stat-item">
+              <div class="stat-number">{{ selectedEmployeeTasks.totalTasks }}</div>
+              <div class="stat-label">Total Tasks</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ selectedEmployeeTasks.completedCount }}</div>
+              <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ selectedEmployeeTasks.pendingCount }}</div>
+              <div class="stat-label">Pending</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tasks List for Selected Date -->
+        <div class="today-tasks-list">
+          <h4>📋 Tasks for {{ formatDate(selectedEmployeeTasks.selectedDate) }} ({{ selectedEmployeeTasks.tasks.length
+            }})</h4>
+
+          <div *ngIf="selectedEmployeeTasks.tasks.length > 0; else noTasksDate" class="tasks-container">
+            <div *ngFor="let task of selectedEmployeeTasks.tasks" class="task-item-detailed"
+              [ngClass]="getStatusClass(task.status)">
+
+              <div class="task-main-info">
+                <div class="task-title-detailed">{{ task.title }}</div>
+                <div class="task-status-detailed" [ngClass]="getStatusClass(task.status)">
+                  {{ task.status }}
+                </div>
+              </div>
+
+              <div class="task-details-detailed">
+                <div class="task-description-detailed">
+                  {{ task.description || 'No description provided' }}
+                </div>
+
+                <div class="task-meta-detailed">
+                  <span class="task-priority" [ngClass]="getPriorityClass(task.priority)">
+                    {{ task.priority }} priority
+                  </span>
+                  <!-- <span class="task-progress">
+                    Progress: {{ task.progress_percent }}%
+                  </span> -->
+                  <!-- <span class="task-estimated">
+                    Estimated: {{ task.estimated_hours }}h
+                  </span> -->
+                  <!-- <span class="task-time-spent">
+                    Spent: {{ task.time_spent || 0 }}h
+                  </span> -->
+                </div>
+
+                <div class="task-actions-detailed">
+                  <!-- <button class="btn btn-sm btn-outline" (click)="viewTaskProgress(task)">
+                    📊 View Progress
+                  </button> -->
+                  <button class="btn btn-sm btn-danger" (click)="deleteTask(task)">
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <ng-template #noTasksDate>
+            <div class="no-tasks-message">
+              <div class="no-tasks-icon-large">📝</div>
+              <p>No tasks assigned for {{ formatDate(selectedEmployeeTasks.selectedDate) }}.</p>
+              <p class="sub-text">Assign tasks from the "Assign Tasks" tab</p>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeEmployeeDetailsModal()">
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" (click)="assignTaskToEmployee()">
+          ➕ Assign New Task
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee Task Details Modal for View All Tasks -->
+  <div *ngIf="showEmployeeTaskDetailsModal && selectedEmployee" class="manager-modal-overlay">
+    <div class="manager-modal employee-details-modal">
+      <div class="modal-header">
+        <h3>👤 {{ selectedEmployee.name }} - All Tasks</h3>
+        <button class="close-btn" (click)="closeEmployeeTaskDetailsModal()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Employee Summary -->
+        <div class="employee-summary">
+          <div class="employee-info-header">
+            <div class="employee-avatar-large">
+              {{ selectedEmployee.name.charAt(0).toUpperCase() }}
+            </div>
+            <div class="employee-info">
+              <h4>{{ selectedEmployee.name }}</h4>
+              <p class="employee-email">{{ selectedEmployee.email }}</p>
+            </div>
+          </div>
+
+          <div class="summary-stats">
+            <div class="stat-item">
+              <div class="stat-number">{{ getEmployeeTaskStatsForModal().total }}</div>
+              <div class="stat-label">Total Tasks</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ getEmployeeTaskStatsForModal().completed }}</div>
+              <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ getEmployeeTaskStatsForModal().pending }}</div>
+              <div class="stat-label">Pending</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- All Tasks List -->
+        <div class="today-tasks-list">
+          <h4>📋 All Assigned Tasks ({{ getEmployeeTasks().length }})</h4>
+
+          <div *ngIf="getEmployeeTasks().length > 0; else noTasks" class="tasks-container">
+            <div *ngFor="let task of getEmployeeTasks()" class="task-item-detailed"
+              [ngClass]="getStatusClass(task.status)">
+
+              <div class="task-main-info">
+                <div class="task-title-detailed">{{ task.title }}</div>
+                <div class="task-status-detailed" [ngClass]="getStatusClass(task.status)">
+                  {{ task.status }}
+                </div>
+              </div>
+
+              <div class="task-details-detailed">
+                <div class="task-description-detailed">
+                  {{ task.description || 'No description provided' }}
+                </div>
+
+                <div class="task-meta-detailed">
+                  <span class="task-priority" [ngClass]="getPriorityClass(task.priority)">
+                    {{ task.priority }} priority
+                  </span>
+                  <!-- <span class="task-progress">
+                    Progress: {{ task.progress_percent }}%
+                  </span> -->
+                  <!-- <span class="task-estimated">
+                    Estimated: {{ task.estimated_hours }}h
+                  </span> -->
+                  <span class="task-due-date">
+                    Due: {{ task.due_date | date:'shortDate' }}
+                  </span>
+                </div>
+
+                <div class="task-actions-detailed">
+                  <!-- <button class="btn btn-sm btn-outline" (click)="viewTaskProgress(task)">
+                    📊 View Progress
+                  </button> -->
+                  <button class="btn btn-sm btn-danger" (click)="deleteTask(task)">
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <ng-template #noTasks>
+            <div class="no-tasks-message">
+              <div class="no-tasks-icon-large">📝</div>
+              <p>No tasks assigned to this employee.</p>
+              <p class="sub-text">Assign tasks from the "Assign Tasks" tab</p>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeEmployeeTaskDetailsModal()">
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" (click)="assignTaskToEmployee()">
+          ➕ Assign New Task
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Employee Modal -->
+  <div *ngIf="showEmployeeModal" class="manager-modal-overlay">
+    <div class="manager-modal">
+      <div class="modal-header">
+        <h3>👥 Register New Employee</h3>
+        <button class="close-btn" (click)="closeEmployeeModal()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <form #employeeForm="ngForm">
+          <!-- Full Name -->
+          <div class="form-group">
+            <label for="empName">Full Name *</label>
+            <input type="text" id="empName" name="name" [(ngModel)]="newEmployee.name" class="form-control"
+              placeholder="Enter employee full name" required>
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label for="empEmail">Email Address *</label>
+            <input type="email" id="empEmail" name="email" [(ngModel)]="newEmployee.email" class="form-control"
+              placeholder="Enter employee email address" required>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label for="empPassword">Password *</label>
+            <input type="password" id="empPassword" name="password" [(ngModel)]="newEmployee.password"
+              class="form-control" placeholder="Set employee password" required minlength="6">
+            <small class="help-text">Minimum 6 characters</small>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label for="empConfirmPassword">Confirm Password *</label>
+            <input type="password" id="empConfirmPassword" name="confirmPassword"
+              [(ngModel)]="newEmployee.confirmPassword" class="form-control" placeholder="Confirm employee password"
+              required>
+          </div>
+
+          <!-- Role (Hidden - always employee) -->
+          <input type="hidden" [(ngModel)]="newEmployee.role" name="role">
+        </form>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" (click)="createEmployee()"
+          [disabled]="!employeeForm.form.valid || newEmployee.password !== newEmployee.confirmPassword">
+          👥 Create Employee Account
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="closeEmployeeModal()">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading manager dashboard...</p>
+  </div>
+</div>

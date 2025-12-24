@@ -1,0 +1,1242 @@
+<div class="task-manager-container" [class.chat-open]="isChatOpen" [class.chat-left]="chatPosition === 'left'"
+  [class.chat-right]="chatPosition === 'right'">
+
+  <!-- ✅ FIX: Delete Notification Toast -->
+  <div *ngIf="showDeleteToast" class="delete-toast">
+    <div class="toast-content">
+      <span class="toast-icon">✅</span>
+      <span class="toast-message">{{ deleteToastMessage }}</span>
+    </div>
+  </div>
+
+  <!-- Header Bar -->
+  <div class="header-bar">
+    <div class="header-left">
+      <h1>Task Manager Pro</h1>
+      <span class="header-subtitle">Project & Task Management System</span>
+    </div>
+    <div class="user-info">
+      <span class="welcome-text">Welcome, <strong>{{ user?.name }}</strong> <span class="role-badge">{{ user?.role
+          }}</span></span>
+
+      <!-- Notifications Bell -->
+      <div class="notification-container">
+        <button (click)="toggleNotifications()" class="btn btn-notification"
+          [class.has-unread]="unreadNotifications > 0">
+          🔔 Notifications
+          <span *ngIf="unreadNotifications > 0" class="notification-badge">
+            {{ unreadNotifications > 99 ? '99+' : unreadNotifications }}
+          </span>
+        </button>
+
+        <!-- Notifications Dropdown -->
+        <!-- ✅ FIX: Improved notifications dropdown with proper time display -->
+        <div *ngIf="showNotifications" class="notifications-dropdown">
+          <div class="notifications-header">
+            <h4>Notifications</h4>
+            <div class="notification-actions">
+              <button (click)="markAllNotificationsAsRead()" class="btn-mark-all">
+                Mark all as read
+              </button>
+            </div>
+          </div>
+          <div class="notifications-list">
+            <div *ngFor="let notification of notifications" class="notification-item"
+              [class.unread]="!notification.is_read" [class.chat-notification]="notification.type === 'new_message'">
+              <div class="notification-content" (click)="markNotificationAsRead(notification)">
+                <div class="notification-title">
+                  <span class="notification-type" [ngClass]="'type-' + notification.type">
+                    {{ notification.type === 'new_message' ? '💬' :
+                    notification.type === 'task_comment' ? '💭' :
+                    notification.type === 'task_assigned' ? '📋' : '🔔' }}
+                    {{ notification.type.replace('_', ' ') }}
+                  </span>
+                  {{ notification.title }}
+                </div>
+                <div class="notification-message">
+                  <!-- ✅ FIX: Show sender name for chat notifications -->
+                  <span *ngIf="notification.type === 'new_message' && notification.sender_name" class="message-sender">
+                    {{ notification.sender_name }}:
+                  </span>
+                  {{ notification.message }}
+                </div>
+                <!-- ✅ FIX: CORRECTED - Use proper time display -->
+                <div class="notification-time">{{ notification.display_time }}</div>
+              </div>
+              <button (click)="deleteNotification(notification, $event)" class="btn-delete-notification"
+                title="Delete notification">
+                🗑️
+              </button>
+            </div>
+            <div *ngIf="notifications.length === 0" class="no-notifications">
+              <div class="no-notifications-icon">🔔</div>
+              <p>No notifications</p>
+              <small>You're all caught up!</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Button with Position Toggle -->
+      <div class="chat-controls">
+        <button (click)="toggleChatPosition()" class="btn btn-chat-position" title="Toggle Chat Position">
+          {{ chatPosition === 'right' ? '⬅️' : '➡️' }}
+        </button>
+        <button (click)="toggleChat()" class="btn btn-chat">
+          💬 Chat
+          <span *ngIf="getTotalUnreadChats() > 0" class="notification-badge chat-badge">
+            {{ getTotalUnreadChats() > 99 ? '99+' : getTotalUnreadChats() }}
+          </span>
+        </button>
+      </div>
+
+      <!-- ✅ FIX: Manager Employees List with Toggle -->
+      <div *ngIf="isManager()" class="employees-dropdown-container">
+        <button class="btn btn-employees" (click)="toggleEmployeesList()">
+          👥 Employees {{ showEmployeesList ? '▲' : '▼' }}
+        </button>
+        <div *ngIf="showEmployeesList" class="employees-dropdown">
+          <div class="employees-list">
+            <div *ngFor="let employee of employees" class="employee-item" (click)="startChatWithEmployee(employee)">
+              <div class="employee-avatar">
+                {{ employee.name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="employee-info">
+                <div class="employee-name">{{ employee.name }}</div>
+                <div class="employee-email">{{ employee.email }}</div>
+              </div>
+              <div class="chat-indicator">💬</div>
+            </div>
+            <div *ngIf="employees.length === 0" class="no-employees">
+              No employees found
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button (click)="logout()" class="btn btn-logout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+        Logout</button>
+    </div>
+  </div>
+
+  <!-- Controls Section -->
+  <div class="controls">
+    <div class="filter-section">
+      <div class="filter-group">
+        <label>Filter by Status:</label>
+        <select [(ngModel)]="filterStatus" (change)="onFilterChange()" class="form-control">
+          <option value="all">All Tasks</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="overdue">Overdue</option>
+        </select>
+      </div>
+
+      <div class="filter-group" *ngIf="isManager()">
+        <label>Filter by Employee:</label>
+        <select [(ngModel)]="filterEmployee" (change)="onFilterChange()" class="form-control">
+          <option value="all">All Employees</option>
+          <option *ngFor="let emp of employees" [value]="emp.id">
+            {{ emp.name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Time Range:</label>
+        <select [(ngModel)]="filterTimeRange" (change)="onFilterChange()" class="form-control">
+          <option value="lifetime">Lifetime</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">Last 7 Days</option>
+          <option value="month">Last 30 Days</option>
+        </select>
+      </div>
+
+      <div class="filter-group" *ngIf="isManager() && projects.length > 0">
+        <label>Filter by Project:</label>
+        <select [(ngModel)]="filterProject" (change)="onFilterChange()" class="form-control">
+          <option value="all">All Projects</option>
+          <option value="none">No Project</option>
+          <option *ngFor="let project of projects" [value]="project.id">
+            {{ project.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card" [ngClass]="{'employee-stat': isEmployee()}">
+        <h3>Total Tasks</h3>
+        <span class="stat-number">{{ totalTasks }}</span>
+        <small *ngIf="isEmployee()">Your Tasks</small>
+      </div>
+      <div class="stat-card" [ngClass]="{'employee-stat': isEmployee()}">
+        <h3>Pending</h3>
+        <span class="stat-number">{{ pendingTasks }}</span>
+        <small *ngIf="isEmployee()">Your Pending</small>
+      </div>
+      <div class="stat-card" [ngClass]="{'employee-stat': isEmployee()}">
+        <h3>In Progress</h3>
+        <span class="stat-number">{{ inProgressTasks }}</span>
+        <small *ngIf="isEmployee()">Your Progress</small>
+      </div>
+      <div class="stat-card" [ngClass]="{'employee-stat': isEmployee()}">
+        <h3>Overdue</h3>
+        <span class="stat-number">{{ overdueTasks }}</span>
+        <small *ngIf="isEmployee()">Your Overdue</small>
+      </div>
+      <div class="stat-card" [ngClass]="{'employee-stat': isEmployee()}">
+        <h3>Completed</h3>
+        <span class="stat-number">{{ completedTasks }}</span>
+        <small *ngIf="isEmployee()">Your Completed</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee Statistics Section -->
+  <div *ngIf="isManager() && selectedEmployeeStats" class="employee-stats-section">
+    <h3>Employee Statistics: {{ selectedEmployeeStats.employee_name }}</h3>
+    <div class="stats">
+      <div class="stat-card employee-stat">
+        <h3>Total Assigned</h3>
+        <span class="stat-number">{{ selectedEmployeeStats.total_tasks }}</span>
+      </div>
+      <div class="stat-card employee-stat">
+        <h3>Pending</h3>
+        <span class="stat-number">{{ selectedEmployeeStats.pending_tasks }}</span>
+      </div>
+      <div class="stat-card employee-stat">
+        <h3>In Progress</h3>
+        <span class="stat-number">{{ selectedEmployeeStats.in_progress_tasks }}</span>
+      </div>
+      <div class="stat-card employee-stat">
+        <h3>Overdue</h3>
+        <span class="stat-number">{{ selectedEmployeeStats.overdue_tasks }}</span>
+      </div>
+      <div class="stat-card employee-stat">
+        <h3>Completed</h3>
+        <span class="stat-number">{{ selectedEmployeeStats.completed_tasks }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee Welcome Section -->
+  <div *ngIf="isEmployee()" class="employee-welcome">
+    <h3>👋 Welcome, {{ user?.name }}!</h3>
+  </div>
+
+  <!-- ==================== ACTION BUTTONS SECTION ==================== -->
+  <div *ngIf="isManager()" class="action-buttons-section">
+    <button (click)="openCreateTaskModal()" class="btn btn-primary btn-large btn-create-task">
+      <span class="btn-icon">📋</span>
+      <span class="btn-text">Create New Task</span>
+    </button>
+    <button (click)="openProjectModal()" class="btn btn-secondary btn-large btn-create-project">
+      <span class="btn-icon">📁</span>
+      <span class="btn-text">New Project</span>
+    </button>
+  </div>
+
+  <!-- ==================== PROJECT MANAGEMENT SECTION ==================== -->
+  <div *ngIf="isManager()" class="projects-section">
+    <div class="section-header">
+      <div class="section-title">
+        <h2>📁 Projects</h2>
+        <span class="project-count">{{ projects.length }} projects</span>
+      </div>
+      <button (click)="openProjectModal()" class="btn btn-primary btn-create-project">
+        + New Project
+      </button>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="projects-grid">
+      <div *ngFor="let project of projects" class="project-card" [ngClass]="getProjectStatusClass(project.status)">
+        <div class="project-header">
+          <div class="project-title-section">
+            <h3 class="project-name">{{ project.name }}</h3>
+            <span class="client-name">{{ project.client_name }}</span>
+          </div>
+          <div class="project-badges">
+            <span class="status-badge" [ngClass]="getProjectStatusClass(project.status)">
+              {{ project.status }}
+            </span>
+            <span class="priority-badge" [ngClass]="getPriorityClass(project.priority)">
+              {{ project.priority }}
+            </span>
+          </div>
+        </div>
+
+        <div class="project-stats">
+          <div class="stat-item">
+            <span class="stat-icon">👥</span>
+            <span class="stat-value">{{ project.employee_count || 0 }}</span>
+            <span class="stat-label">Employees</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📋</span>
+            <span class="stat-value">{{ project.task_count || 0 }}</span>
+            <span class="stat-label">Tasks</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">✅</span>
+            <span class="stat-value">{{ project.completed_tasks || 0 }}</span>
+            <span class="stat-label">Completed</span>
+          </div>
+        </div>
+
+        <div class="project-progress">
+          <div class="progress-header">
+            <span>Progress</span>
+            <span class="progress-percent">{{ getProjectProgress(project) }}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="getProjectProgress(project)"
+              [ngClass]="{'complete': getProjectProgress(project) === 100}"></div>
+          </div>
+        </div>
+
+        <div class="project-actions">
+          <button (click)="viewProjectDetails(project)" class="btn btn-info btn-sm">
+            View Details
+          </button>
+          <button (click)="openAssignEmployees(project)" class="btn btn-secondary btn-sm">
+            Manage Team
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="projects.length === 0" class="no-projects">
+        <div class="empty-icon">📁</div>
+        <p>No projects yet</p>
+        <button (click)="openProjectModal()" class="btn btn-primary">Create Your First Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Actions Bar -->
+  <div *ngIf="showBulkActions && isManager()" class="bulk-actions-bar">
+    <div class="bulk-info">
+      <span class="selected-count">{{ selectedTasks.length }} tasks selected</span>
+      <button (click)="selectAllTasks()" class="btn btn-link">
+        {{ selectedTasks.length === filteredTasks.length ? 'Deselect All' : 'Select All' }}
+      </button>
+    </div>
+    <div class="bulk-buttons">
+      <button (click)="bulkUpdateStatus('in_progress')" class="btn btn-warning btn-sm">Mark In Progress</button>
+      <button (click)="bulkUpdateStatus('completed')" class="btn btn-success btn-sm">Mark Complete</button>
+      <button (click)="selectedTasks = []; showBulkActions = false" class="btn btn-secondary btn-sm">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Tasks Grid -->
+  <div class="tasks-grid">
+    <div *ngFor="let task of filteredTasks" class="task-card" [ngClass]="getStatusClass(task.status)"
+      [class.selected]="isTaskSelected(task.id)">
+
+      <!-- Task Selection Checkbox (Manager Only) -->
+      <div *ngIf="isManager()" class="task-select-checkbox"
+        (click)="toggleTaskSelection(task); $event.stopPropagation()">
+        <input type="checkbox" [checked]="isTaskSelected(task.id)">
+      </div>
+
+      <div class="task-header">
+        <h3 class="task-title">{{ task.title }}</h3>
+        <div class="task-meta">
+          <span class="priority-badge" [ngClass]="getPriorityClass(task.priority)">
+            {{ task.priority }}
+          </span>
+          <span class="status-badge" [ngClass]="getStatusClass(task.status)">
+            {{ task.status.replace('_', ' ') }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Project & Client Badge -->
+      <div *ngIf="task.project_name || task.project_client" class="project-client-badge">
+        <span class="badge-icon">📁</span>
+        <div class="badge-content">
+          <span class="project-name" *ngIf="task.project_name">{{ task.project_name }}</span>
+          <span class="client-name" *ngIf="task.project_client">Client: {{ task.project_client }}</span>
+        </div>
+      </div>
+
+      <div class="task-description">
+        {{ (task.description || 'No description provided') | slice:0:100 }}
+        {{ task.description && task.description.length > 100 ? '...' : '' }}
+      </div>
+
+      <div class="task-details">
+        <div class="detail-item" *ngIf="isManager()">
+          <strong>Assigned To:</strong> {{ task.assigned_to_name }}
+        </div>
+        <div class="detail-item">
+          <strong>Assigned By:</strong> {{ task.assigned_by_name }}
+        </div>
+        <div class="detail-item">
+          <strong>Due Date:</strong> {{ task.due_date | date:'medium' }}
+        </div>
+        <div class="detail-item" *ngIf="task.estimated_hours">
+          <strong>Estimated:</strong> {{ task.estimated_hours }} hours
+        </div>
+        <div class="detail-item">
+          <strong>Time Spent:</strong> {{ task.time_spent || 0 }} hours
+        </div>
+      </div>
+
+      <!-- Countdown Timer -->
+      <div class="countdown" [ngClass]="{'overdue': task.is_overdue}">
+        ⏰ {{ formatTimeRemaining(task.time_remaining || 0) }}
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-section">
+        <div class="progress-header">
+          <span>Progress: {{ task.progress_percent }}%</span>
+          <span class="progress-actions">
+            <button *ngIf="(isEmployee() || task.assigned_to === user.id) && task.status !== 'completed'"
+              (click)="quickProgressUpdate(task, 25)" class="btn-quick-progress" title="Set to 25%">
+              25%
+            </button>
+            <button *ngIf="(isEmployee() || task.assigned_to === user.id) && task.status !== 'completed'"
+              (click)="quickProgressUpdate(task, 50)" class="btn-quick-progress" title="Set to 50%">
+              50%
+            </button>
+            <button *ngIf="(isEmployee() || task.assigned_to === user.id) && task.status !== 'completed'"
+              (click)="quickProgressUpdate(task, 75)" class="btn-quick-progress" title="Set to 75%">
+              75%
+            </button>
+            <button *ngIf="(isEmployee() || task.assigned_to === user.id) && task.status !== 'completed'"
+              (click)="quickProgressUpdate(task, 100)" class="btn-quick-progress complete" title="Mark Complete">
+              100%
+            </button>
+          </span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="task.progress_percent"
+            [ngClass]="{'complete': task.progress_percent === 100}"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="task-actions">
+        <button (click)="viewTaskDetails(task)" class="btn btn-info">
+          📋 View Details
+        </button>
+
+        <button *ngIf="isManager()" (click)="duplicateTask(task)" class="btn btn-secondary" title="Duplicate Task">
+          📋 Duplicate
+        </button>
+
+        <div *ngIf="isEmployee() || task.assigned_to === user.id" class="status-actions">
+          <button *ngIf="task.status === 'pending'" (click)="updateTaskStatus(task, 'in_progress')"
+            class="btn btn-primary">
+            Start Task
+          </button>
+
+          <button *ngIf="task.status === 'in_progress'" (click)="initializeProgressUpdate(task)"
+            class="btn btn-secondary">
+            Update Progress
+          </button>
+
+          <button *ngIf="task.status !== 'completed'" (click)="updateTaskStatus(task, 'completed')"
+            class="btn btn-success">
+            Mark Complete
+          </button>
+
+          <button *ngIf="task.status === 'completed'" class="btn btn-completed" disabled>
+            ✅ Completed
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="!isEmployee() && task.assigned_to !== user.id" class="no-actions">
+        <small>This task is assigned to another employee</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ FIX: Beautiful Task Details Modal -->
+  <div *ngIf="selectedTaskForDetails" class="modal-overlay beautiful-modal">
+    <div class="modal modal-large modal-beautiful">
+      <div class="modal-header beautiful-header">
+        <div class="header-content">
+          <h3>Task Details</h3>
+          <div class="task-status-indicator">
+            <span class="status-badge" [ngClass]="getStatusClass(selectedTaskForDetails.status)">
+              {{ selectedTaskForDetails.status.replace('_', ' ') }}
+            </span>
+            <span class="priority-badge" [ngClass]="getPriorityClass(selectedTaskForDetails.priority)">
+              {{ selectedTaskForDetails.priority }}
+            </span>
+          </div>
+        </div>
+        <button (click)="closeTaskDetails()" class="btn-close beautiful-close">×</button>
+      </div>
+
+      <div class="modal-body beautiful-body">
+        <div class="task-detail-hero">
+          <h4 class="task-title-beautiful">{{ selectedTaskForDetails.title }}</h4>
+          <p class="task-description-beautiful">{{ selectedTaskForDetails.description || 'No description provided' }}
+          </p>
+        </div>
+
+        <div class="beautiful-grid">
+          <div class="detail-card">
+            <div class="card-header">
+              <span class="card-icon">👤</span>
+              <h5>Assignment</h5>
+            </div>
+            <div class="card-content">
+              <div class="detail-row">
+                <span class="detail-label">Assigned To:</span>
+                <span class="detail-value">{{ selectedTaskForDetails.assigned_to_name }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Assigned By:</span>
+                <span class="detail-value">{{ selectedTaskForDetails.assigned_by_name }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <div class="card-header">
+              <span class="card-icon">📅</span>
+              <h5>Timeline</h5>
+            </div>
+            <div class="card-content">
+              <div class="detail-row">
+                <span class="detail-label">Due Date:</span>
+                <span class="detail-value">{{ selectedTaskForDetails.due_date | date:'fullDate' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Created At:</span>
+                <span class="detail-value">{{ selectedTaskForDetails.created_at | date:'medium' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <div class="card-header">
+              <span class="card-icon">⏱️</span>
+              <h5>Time Tracking</h5>
+            </div>
+            <div class="card-content">
+              <div class="detail-row" *ngIf="selectedTaskForDetails.estimated_hours">
+                <span class="detail-label">Estimated:</span>
+                <span class="detail-value">{{ selectedTaskForDetails.estimated_hours }} hours</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Time Spent:</span>
+                <span class="detail-value">{{ selectedTaskForDetails.time_spent || 0 }} hours</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card full-width">
+            <div class="card-header">
+              <span class="card-icon">📊</span>
+              <h5>Progress</h5>
+            </div>
+            <div class="card-content">
+              <div class="progress-display">
+                <div class="progress-info">
+                  <span class="progress-percent">{{ selectedTaskForDetails.progress_percent }}%</span>
+                  <span class="progress-text">Complete</span>
+                </div>
+                <div class="progress-bar beautiful-progress">
+                  <div class="progress-fill" [style.width.%]="selectedTaskForDetails.progress_percent"
+                    [ngClass]="{'complete': selectedTaskForDetails.progress_percent === 100}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card full-width" *ngIf="selectedTaskForDetails.time_remaining">
+            <div class="card-header">
+              <span class="card-icon">⏰</span>
+              <h5>Time Remaining</h5>
+            </div>
+            <div class="card-content">
+              <div class="countdown-beautiful" [ngClass]="{'overdue': selectedTaskForDetails.is_overdue}">
+                <div class="countdown-icon">
+                  {{ selectedTaskForDetails.is_overdue ? '🚨' : '⏰' }}
+                </div>
+                <div class="countdown-content">
+                  <div class="countdown-text">
+                    {{ selectedTaskForDetails.is_overdue ? 'OVERDUE' : 'Time Remaining' }}
+                  </div>
+                  <div class="countdown-time">
+                    {{ formatTimeRemaining(selectedTaskForDetails.time_remaining) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Beautiful Comments Section -->
+        <div class="comments-section beautiful-comments">
+          <div class="section-header">
+            <h4>💬 Comments</h4>
+            <span class="comments-count">{{ taskComments.length }} comments</span>
+          </div>
+
+          <div class="comments-list beautiful-comments-list">
+            <div *ngFor="let comment of taskComments" class="comment beautiful-comment">
+              <div class="comment-avatar">
+                {{ comment.user_name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="comment-content">
+                <div class="comment-header">
+                  <strong class="comment-author">{{ comment.user_name }}</strong>
+                  <!-- ✅ FIX: Now using the same time format as notifications -->
+                  <span class="comment-time">{{ comment.display_time }}</span>
+                </div>
+                <div class="comment-text">{{ comment.comment }}</div>
+              </div>
+            </div>
+
+            <div *ngIf="taskComments.length === 0" class="no-comments beautiful-no-comments">
+              <div class="empty-icon">💭</div>
+              <p>No comments yet. Be the first to comment!</p>
+            </div>
+          </div>
+
+          <div class="add-comment beautiful-add-comment">
+            <div class="comment-input-container">
+              <textarea [(ngModel)]="newComment" placeholder="Add a comment..." class="form-control beautiful-textarea"
+                rows="3"></textarea>
+              <button (click)="addComment()" class="btn btn-primary beautiful-comment-btn">
+                <span class="btn-icon">💬</span>
+                Add Comment
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions beautiful-actions">
+        <button *ngIf="isEmployee() || selectedTaskForDetails.assigned_to === user.id"
+          (click)="initializeProgressUpdate(selectedTaskForDetails); closeTaskDetails()" class="btn btn-primary">
+          Update Progress
+        </button>
+        <button (click)="closeTaskDetails()" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Update Modal -->
+  <div *ngIf="selectedTask" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Update Progress for {{ selectedTask.title }}</h3>
+        <button (click)="selectedTask = null" class="btn-close">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Progress Percentage: <strong>{{ progressUpdate.progress_percent }}%</strong></label>
+          <input type="range" [(ngModel)]="progressUpdate.progress_percent" min="0" max="100" step="5"
+            class="form-control progress-slider">
+          <div class="slider-labels">
+            <span>0%</span>
+            <span>50%</span>
+            <span>100%</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Time Spent (hours):</label>
+          <input type="number" [(ngModel)]="progressUpdate.time_spent" min="0" class="form-control"
+            placeholder="Enter time spent in hours">
+        </div>
+
+        <div class="progress-preview">
+          <strong>Preview:</strong>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="progressUpdate.progress_percent"
+              [ngClass]="{'complete': progressUpdate.progress_percent === 100}"></div>
+          </div>
+          <span>{{ progressUpdate.progress_percent }}% Complete</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button (click)="updateProgress(selectedTask)" class="btn btn-primary">
+          {{ progressUpdate.progress_percent === 100 ? '🎉 Mark Complete' : 'Save Progress' }}
+        </button>
+        <button (click)="selectedTask = null" class="btn btn-secondary">Cancel</button>
+
+        <div class="quick-actions">
+          <button (click)="progressUpdate.progress_percent = 25" class="btn-quick">25%</button>
+          <button (click)="progressUpdate.progress_percent = 50" class="btn-quick">50%</button>
+          <button (click)="progressUpdate.progress_percent = 75" class="btn-quick">75%</button>
+          <button (click)="progressUpdate.progress_percent = 100" class="btn-quick complete">100%</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Creation Modal -->
+  <div *ngIf="showGroupCreation" class="modal-overlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>Create Group Chat</h3>
+        <button (click)="closeGroupCreation()" class="btn-close">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Group Name</label>
+          <input [(ngModel)]="groupName" type="text" class="form-control" placeholder="Enter group name">
+        </div>
+
+        <div class="form-group">
+          <label>Select Employees</label>
+          <div class="employees-selection">
+            <div *ngFor="let employee of employees" class="employee-selection-item"
+              [class.selected]="selectedEmployees.includes(employee.id)" (click)="toggleEmployeeSelection(employee.id)">
+              <div class="employee-avatar">
+                {{ employee.name.charAt(0).toUpperCase() }}
+              </div>
+              <span class="employee-name">{{ employee.name }}</span>
+              <span class="checkmark" *ngIf="selectedEmployees.includes(employee.id)">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="selected-count" *ngIf="selectedEmployees.length > 0">
+          {{ selectedEmployees.length }} employee(s) selected
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button (click)="closeGroupCreation()" class="btn btn-secondary">Cancel</button>
+        <button (click)="createGroup()" class="btn btn-primary"
+          [disabled]="!groupName.trim() || selectedEmployees.length === 0">
+          Create Group
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ FIX: Improved Chat Component with Consistent Time Format -->
+  <div class="chat-container" [class.open]="isChatOpen" [class.left-side]="chatPosition === 'left'"
+    [class.right-side]="chatPosition === 'right'">
+    <div class="chat-header">
+      <h3>Messages</h3>
+      <div class="chat-header-actions">
+        <button (click)="toggleChatPosition()" class="btn-chat-position"
+          title="Move to {{ chatPosition === 'right' ? 'left' : 'right' }}">
+          {{ chatPosition === 'right' ? '⬅️' : '➡️' }}
+        </button>
+        <button (click)="toggleChat()" class="btn-close">×</button>
+      </div>
+    </div>
+
+    <div class="chat-sidebar" *ngIf="!selectedChat">
+      <!-- ✅ FIX: Improved chat list with better timing -->
+      <div class="chat-list">
+        <div *ngFor="let chat of chats" class="chat-item" [class.active]="isChatSelected(chat)"
+          (click)="selectChat(chat)">
+          <div class="chat-avatar" [class.group-avatar]="chat.type === 'group'">
+            {{ chat.type === 'group' ? '👥' : chat.other_user_name.charAt(0) || 'U' }}
+          </div>
+          <div class="chat-info">
+            <div class="chat-name">
+              {{ chat.type === 'group' ? (chat.name || 'Group Chat') : chat.other_user_name }}
+              <span class="chat-type" *ngIf="chat.type === 'group'">(Group)</span>
+            </div>
+            <div class="chat-last-message">
+              {{ chat.last_message || 'No messages yet' }}
+            </div>
+            <!-- ✅ FIX: Consistent time for chat list -->
+            <div class="chat-time">{{ chat.display_time }}</div>
+          </div>
+          <div class="unread-badge" *ngIf="chat.unread_count > 0">
+            {{ chat.unread_count > 99 ? '99+' : chat.unread_count }}
+          </div>
+        </div>
+
+        <div *ngIf="chats.length === 0" class="no-chats">
+          <div class="no-chats-icon">💬</div>
+          <p>No conversations yet</p>
+          <small *ngIf="isManager()">Start a chat with an employee</small>
+          <small *ngIf="isEmployee()">Your manager will start a chat with you</small>
+        </div>
+      </div>
+
+      <div class="new-chat-section" *ngIf="isManager()">
+        <button class="btn btn-primary" (click)="createGroupChat()">
+          Create Group
+        </button>
+      </div>
+    </div>
+
+    <div class="chat-window" *ngIf="selectedChat">
+      <div class="chat-window-header">
+        <button (click)="backToChats()" class="btn-back">←</button>
+        <div class="chat-title">
+          {{ selectedChat.type === 'group' ? (selectedChat.name || 'Group Chat') : selectedChat.other_user_name }}
+          <span class="chat-type" *ngIf="selectedChat.type === 'group'">(Group)</span>
+          <span class="online-status">online</span>
+        </div>
+      </div>
+
+      <!-- ✅ FIX: CORRECTED - Improved chat messages with proper sender names and time -->
+      <div class="messages-container" #messagesContainer (scroll)="onMessagesScroll($event)">
+        <div *ngIf="isTyping" class="typing-indicator">
+          <div class="typing-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+          <span>{{ typingUsers.join(', ') }} is typing...</span>
+        </div>
+
+        <div *ngFor="let message of messages" class="message" [class.sent]="message.sender_id === user.id"
+          [class.received]="message.sender_id !== user.id" [class.group-message]="selectedChat.type === 'group'">
+
+          <!-- ✅ FIX: Show sender name for ALL messages (both group and personal) except current user's messages -->
+          <div class="message-sender" *ngIf="message.sender_id !== user.id">
+            {{ message.sender_name }}
+          </div>
+
+          <div class="message-content">{{ message.content }}</div>
+
+          <!-- ✅ FIX: CORRECTED time display for messages -->
+          <div class="message-time">{{ message.display_time }}</div>
+        </div>
+
+        <div *ngIf="messages.length === 0" class="no-messages">
+          <div class="no-messages-icon">💭</div>
+          <p>No messages yet</p>
+          <small>Start the conversation by sending a message</small>
+        </div>
+      </div>
+
+      <div class="message-input">
+        <input #messageInput [(ngModel)]="newMessage" (keyup.enter)="sendMessage()" (input)="onTyping()"
+          placeholder="Type a message..." class="form-control message-input-field">
+        <button (click)="sendMessage()" class="btn btn-send">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Overlay -->
+  <div *ngIf="isChatOpen" class="chat-overlay" (click)="toggleChat()"></div>
+
+  <!-- ==================== PROJECT MODALS ==================== -->
+
+  <!-- Create Project Modal -->
+  <div *ngIf="showProjectModal" class="modal-overlay">
+    <div class="modal modal-large project-modal">
+      <div class="modal-header">
+        <h3>Create New Project</h3>
+        <button (click)="closeProjectModal()" class="btn-close">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Project Name *</label>
+            <input [(ngModel)]="newProject.name" type="text" class="form-control" placeholder="Enter project name">
+          </div>
+          <div class="form-group">
+            <label>Client Name *</label>
+            <input [(ngModel)]="newProject.client_name" type="text" class="form-control"
+              placeholder="Enter client name">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="newProject.description" class="form-control" rows="3"
+            placeholder="Project description"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Priority</label>
+            <select [(ngModel)]="newProject.priority" class="form-control">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="newProject.status" class="form-control">
+              <option value="active">Active</option>
+              <option value="on_hold">On Hold</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input [(ngModel)]="newProject.start_date" type="date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input [(ngModel)]="newProject.end_date" type="date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Budget</label>
+            <input [(ngModel)]="newProject.budget" type="number" class="form-control" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Assign Employees ({{ newProject.employee_ids.length }} selected)</label>
+          <div class="employee-selection-grid">
+            <div *ngFor="let employee of employees" class="employee-select-item"
+              [class.selected]="isProjectEmployeeSelected(employee.id)" (click)="toggleProjectEmployee(employee.id)">
+              <div class="employee-avatar">{{ employee.name.charAt(0).toUpperCase() }}</div>
+              <div class="employee-details">
+                <span class="name">{{ employee.name }}</span>
+                <span class="email">{{ employee.email }}</span>
+              </div>
+              <span class="checkmark" *ngIf="isProjectEmployeeSelected(employee.id)">✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button (click)="closeProjectModal()" class="btn btn-secondary">Cancel</button>
+        <button (click)="createProject()" class="btn btn-primary"
+          [disabled]="!newProject.name || !newProject.client_name">
+          Create Project
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Details Modal -->
+  <div *ngIf="showProjectDetails && selectedProject" class="modal-overlay">
+    <div class="modal modal-large project-details-modal">
+      <div class="modal-header project-details-header">
+        <div class="header-info">
+          <h3>{{ selectedProject.name }}</h3>
+          <span class="client-badge">Client: {{ selectedProject.client_name }}</span>
+        </div>
+        <div class="header-actions">
+          <span class="status-badge large" [ngClass]="getProjectStatusClass(selectedProject.status)">
+            {{ selectedProject.status }}
+          </span>
+          <button (click)="closeProjectDetails()" class="btn-close">×</button>
+        </div>
+      </div>
+
+      <div class="modal-body project-details-body">
+        <div class="project-overview" *ngFor="let project of projects" [ngClass]="getProjectStatusClass(project.status)">
+          <div class="overview-card">
+            <div class="card-icon">📊</div>
+            <div class="card-content">
+              <h4>Progress</h4>
+              <div class="progress-display">
+                <div class="progress-bar large">
+                  <div class="progress-fill" [style.width.%]="getProjectProgress(selectedProject)"></div>
+                </div>
+                <span class="progress-text">{{ getProjectProgress(selectedProject) }}%</span>
+              </div>
+            </div>
+          </div>
+          <div class="overview-card">
+            <div class="card-icon">📋</div>
+            <div class="card-content">
+              <h4>Tasks</h4>
+              <!-- <span class="count">{{ selectedProject.task_count || 0 }}</span> -->
+              <span class="count">{{ project.task_count || 0 }}</span>
+            </div>
+          </div>
+          <div class="overview-card">
+            <div class="card-icon">✅</div>
+            <div class="card-content">
+              <h4>Completed</h4>
+              <!-- <span class="count">{{ selectedProject.completed_tasks || 0 }}</span> -->
+              <span class="count">{{ project.completed_tasks || 0 }}</span>
+            </div>
+          </div>
+          <div class="overview-card">
+            <div class="card-icon">👥</div>
+            <div class="card-content">
+              <h4>Team Size</h4>
+              <span class="count">{{ selectedProject.employees?.length || 0 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-description" *ngIf="selectedProject.description">
+          <h4>Description</h4>
+          <p>{{ selectedProject.description }}</p>
+        </div>
+
+        <!-- Team Members Section -->
+        <div class="team-section">
+          <div class="section-header">
+            <h4>👥 Team Members</h4>
+            <button (click)="openAssignEmployees(selectedProject)" class="btn btn-sm btn-primary">
+              + Add Members
+            </button>
+          </div>
+
+          <div class="team-grid" *ngIf="selectedProject.employees && selectedProject.employees.length > 0">
+            <div *ngFor="let emp of selectedProject.employees" class="team-member-card">
+              <div class="member-avatar">{{ emp.employee_name.charAt(0).toUpperCase() }}</div>
+              <div class="member-info">
+                <span class="member-name">{{ emp.employee_name }}</span>
+                <span class="member-email">{{ emp.employee_email }}</span>
+                <span class="member-role">{{ emp.role }}</span>
+              </div>
+              <div class="member-stats">
+                <span class="stat">Tasks: {{ emp.total_tasks || 0 }}</span>
+                <span class="stat completed">Completed: {{ emp.completed_tasks || 0 }}</span>
+              </div>
+              <button (click)="removeEmployeeFromProject(selectedProject.id, emp.employee_id)"
+                class="btn btn-danger btn-xs" title="Remove from project">
+                ×
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="!selectedProject.employees || selectedProject.employees.length === 0" class="no-team">
+            <p>No team members assigned yet</p>
+            <button (click)="openAssignEmployees(selectedProject)" class="btn btn-primary btn-sm">
+              Assign Employees
+            </button>
+          </div>
+        </div>
+
+        <!-- Project Tasks Section -->
+        <div class="project-tasks-section" *ngIf="selectedProject.tasks && selectedProject.tasks.length > 0">
+          <h4>📋 Project Tasks</h4>
+          <div class="tasks-list">
+            <div *ngFor="let task of selectedProject.tasks" class="task-item" [ngClass]="getStatusClass(task.status)">
+              <div class="task-info">
+                <span class="task-title">{{ task.title }}</span>
+                <span class="task-assignee">{{ task.assigned_to_name }}</span>
+              </div>
+              <div class="task-badges">
+                <span class="status-badge small" [ngClass]="getStatusClass(task.status)">{{ task.status }}</span>
+                <span class="priority-badge small" [ngClass]="getPriorityClass(task.priority)">{{ task.priority
+                  }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions project-actions">
+        <button (click)="deleteProject(selectedProject)" class="btn btn-danger">Delete Project</button>
+        <div class="status-buttons">
+          <button *ngIf="selectedProject.status !== 'completed'"
+            (click)="updateProjectStatus(selectedProject, 'completed')" class="btn btn-success">Mark Complete</button>
+          <button *ngIf="selectedProject.status === 'active'" (click)="updateProjectStatus(selectedProject, 'on_hold')"
+            class="btn btn-warning">Put On Hold</button>
+          <button *ngIf="selectedProject.status === 'on_hold'" (click)="updateProjectStatus(selectedProject, 'active')"
+            class="btn btn-primary">Reactivate</button>
+        </div>
+        <button (click)="closeProjectDetails()" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Employees Modal -->
+  <div *ngIf="showAssignEmployees && selectedProject" class="modal-overlay">
+    <div class="modal assign-employees-modal">
+      <div class="modal-header">
+        <h3>Assign Employees to {{ selectedProject.name }}</h3>
+        <button (click)="closeAssignEmployees()" class="btn-close">×</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-subtitle">Select employees to assign to this project</p>
+
+        <div class="employee-selection-grid">
+          <div *ngFor="let employee of employees" class="employee-select-item"
+            [class.selected]="isEmployeeAssigned(employee.id)" (click)="toggleEmployeeAssignment(employee.id)">
+            <div class="employee-avatar">{{ employee.name.charAt(0).toUpperCase() }}</div>
+            <div class="employee-details">
+              <span class="name">{{ employee.name }}</span>
+              <span class="email">{{ employee.email }}</span>
+            </div>
+            <span class="checkmark" *ngIf="isEmployeeAssigned(employee.id)">✓</span>
+          </div>
+        </div>
+
+        <div class="selected-count" *ngIf="projectEmployeesToAssign.length > 0">
+          {{ projectEmployeesToAssign.length }} employee(s) selected
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button (click)="closeAssignEmployees()" class="btn btn-secondary">Cancel</button>
+        <button (click)="saveEmployeeAssignments()" class="btn btn-primary">
+          Save Assignments
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="filteredTasks.length === 0" class="empty-state">
+    <div class="empty-icon">📝</div>
+    <p *ngIf="isEmployee()">No tasks assigned to you yet.</p>
+    <p *ngIf="isManager()">No tasks found for the selected filters.</p>
+    <p class="sub-text" *ngIf="isEmployee()">Please contact your manager if you believe this is incorrect.</p>
+    <button *ngIf="isManager()" (click)="openCreateTaskModal()" class="btn btn-primary">
+      Create Your First Task
+    </button>
+  </div>
+
+  <!-- ==================== CREATE TASK MODAL ==================== -->
+  <div *ngIf="showCreateTaskModal" class="modal-overlay">
+    <div class="modal modal-large create-task-modal">
+      <div class="modal-header create-task-header">
+        <div class="header-content">
+          <h3>📋 Create New Task</h3>
+          <p class="header-subtitle">Assign tasks to multiple employees at once</p>
+        </div>
+        <button (click)="closeCreateTaskModal()" class="btn-close">×</button>
+      </div>
+
+      <div class="modal-body create-task-body">
+        <!-- Quick Templates -->
+        <div class="templates-section">
+          <label class="section-label">Quick Templates</label>
+          <div class="templates-grid">
+            <button *ngFor="let template of taskTemplates" class="template-btn"
+              [class.active]="newTask.title === template.name" (click)="applyTemplate(template)">
+              <span class="template-icon">
+                {{ template.name === 'Bug Fix' ? '🐛' :
+                template.name === 'Feature Development' ? '✨' :
+                template.name === 'Code Review' ? '👁️' :
+                template.name === 'Documentation' ? '📝' : '🧪' }}
+              </span>
+              <span class="template-name">{{ template.name }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <!-- Task Details -->
+          <div class="form-section">
+            <h4>Task Details</h4>
+
+            <div class="form-group">
+              <label>Task Title *</label>
+              <input [(ngModel)]="newTask.title" type="text" class="form-control" placeholder="Enter task title">
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <textarea [(ngModel)]="newTask.description" class="form-control" rows="3"
+                placeholder="Task description"></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Priority</label>
+                <select [(ngModel)]="newTask.priority" class="form-control">
+                  <option value="low">🟢 Low</option>
+                  <option value="medium">🟡 Medium</option>
+                  <option value="high">🔴 High</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Estimated Hours</label>
+                <input [(ngModel)]="newTask.estimated_hours" type="number" min="1" class="form-control"
+                  placeholder="Hours">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Due Date *</label>
+              <input [(ngModel)]="newTask.due_date" type="datetime-local" class="form-control">
+            </div>
+
+            <!-- Project & Client Name Fields -->
+            <div class="project-client-section">
+              <h5 class="section-title">📁 Project Information</h5>
+
+              <div class="form-group">
+                <label>Project Name</label>
+                <input [(ngModel)]="newTask.project_name" type="text" class="form-control"
+                  placeholder="Enter project name (e.g., Website Redesign)">
+              </div>
+
+              <div class="form-group">
+                <label>Client Name</label>
+                <input [(ngModel)]="newTask.client_name" type="text" class="form-control"
+                  placeholder="Enter client name (e.g., ABC Company)">
+              </div>
+
+              <!-- OR Select Existing Project -->
+              <div class="form-group">
+                <label>Or Select Existing Project</label>
+                <select [(ngModel)]="newTask.project_id" (change)="onProjectSelect()"
+                  class="form-control project-select">
+                  <option [value]="null">-- Select Project --</option>
+                  <option *ngFor="let project of projects" [value]="project.id">
+                    {{ project.name }} - {{ project.client_name }}
+                  </option>
+                </select>
+              </div>
+
+              <div *ngIf="newTask.project_name || newTask.client_name" class="project-preview">
+                <span class="project-icon">📁</span>
+                <span class="project-info">
+                  <strong>{{ newTask.project_name || 'No Project' }}</strong>
+                  <span *ngIf="newTask.client_name"> | {{ newTask.client_name }}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employee Assignment -->
+          <div class="form-section">
+            <h4>Assign Employees ({{ newTask.assigned_employees.length }} selected)</h4>
+            <p class="section-hint">Select 1 or more employees to assign this task</p>
+
+            <div class="employee-selection-grid large">
+              <div *ngFor="let employee of employees" class="employee-select-item"
+                [class.selected]="isTaskEmployeeSelected(employee.id)" (click)="toggleTaskEmployee(employee.id)">
+                <div class="employee-avatar">{{ employee.name.charAt(0).toUpperCase() }}</div>
+                <div class="employee-details">
+                  <span class="name">{{ employee.name }}</span>
+                  <span class="email">{{ employee.email }}</span>
+                </div>
+                <span class="checkmark" *ngIf="isTaskEmployeeSelected(employee.id)">✓</span>
+              </div>
+            </div>
+
+            <div *ngIf="newTask.assigned_employees.length > 0" class="selected-summary">
+              <strong>Will create {{ newTask.assigned_employees.length }} task(s)</strong>
+              <p>One task for each selected employee</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions create-task-actions">
+        <button (click)="closeCreateTaskModal()" class="btn btn-secondary">Cancel</button>
+        <button (click)="createTask()" class="btn btn-primary btn-create"
+          [disabled]="!newTask.title || newTask.assigned_employees.length === 0">
+          <span class="btn-icon">✨</span>
+          Create Task{{ newTask.assigned_employees.length > 1 ? 's' : '' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

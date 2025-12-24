@@ -1,0 +1,396 @@
+<!-- Floating Chat Button -->
+<div class="chat-floating-button" [class.left]="position === 'left'" [class.right]="position === 'right'" *ngIf="shouldShowChat()">
+    <button (click)="toggleChatPanel()" class="chat-toggle-btn" [class.active]="isOpen">
+        <span class="chat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white"/>
+            </svg>
+        </span>
+        <span class="unread-indicator" *ngIf="getTotalUnreadCount() > 0">
+            {{ formatUnreadCount(getTotalUnreadCount()) }}
+        </span>
+    </button>
+</div>
+
+<!-- Chat Overlay -->
+<div *ngIf="isOpen" class="chat-overlay" (click)="closeChat()"></div>
+
+<!-- Chat Panel -->
+<div class="chat-panel" [class.open]="isOpen" [class.left-side]="position === 'left'"
+    [class.right-side]="position === 'right'" *ngIf="shouldShowChat()">
+
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <div class="chat-header-content">
+            <button *ngIf="selectedChat" (click)="backToChats()" class="btn-back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <div class="header-title">
+                <h3 class="chat-title">
+                    <span *ngIf="!selectedChat" class="title-text">
+                        <svg class="title-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/>
+                        </svg>
+                        Messages
+                        <span *ngIf="getTotalUnreadCount() > 0" class="total-unread-badge">
+                            {{ getTotalUnreadCount() }}
+                        </span>
+                    </span>
+                    <span *ngIf="selectedChat" class="selected-chat-info">
+                        <div class="selected-chat-name">
+                            {{ selectedChat.type === 'group' ? selectedChat.name : selectedChat.other_user_name }}
+                        </div>
+                        <div *ngIf="selectedChat.type === 'private'" class="user-status">
+                            <span class="status-dot" [class.online]="isUserOnline(selectedChat.other_user_id)"></span>
+                            <span class="status-text">{{ isUserOnline(selectedChat.other_user_id) ? 'Online' : 'Offline' }}</span>
+                        </div>
+                    </span>
+                </h3>
+            </div>
+            <div class="header-actions">
+                <button *ngIf="!selectedChat && isManager()" (click)="toggleEmployeesVisibility()" 
+                    class="btn-toggle-employees" 
+                    [class.active]="showEmployees"
+                    [title]="showEmployees ? 'Hide team members' : 'Show team members'">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </button>
+                <button (click)="closeChat()" class="btn-close" title="Close chat">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chats List View -->
+    <div *ngIf="!selectedChat" class="chats-view">
+        <!-- Main Container -->
+        <div class="main-chat-container">
+            
+            <!-- Chats List Section -->
+            <div class="chats-list-section">
+                <!-- Search and Actions -->
+                <div class="chats-toolbar">
+                    <div class="search-container">
+                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                        <input type="text" placeholder="Search chats..." class="search-input">
+                    </div>
+                    <div class="toolbar-actions">
+                        <button *ngIf="isManager()" (click)="showGroupCreation = true" class="btn-new-group" title="New Group">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chats List -->
+                <div class="chats-list-container">
+                    <!-- Loading State -->
+                    <div *ngIf="isLoadingChats" class="loading-chats">
+                        <div class="loading-spinner"></div>
+                        <span>Loading chats...</span>
+                    </div>
+
+                    <!-- Chat Items -->
+                    <div *ngFor="let chat of chats" class="chat-item" [class.active]="isChatSelected(chat)"
+                        (click)="handleChatSelection(chat)">
+
+                        <div class="chat-avatar" [class.group]="chat.type === 'group'" [class.online]="chat.type === 'private' && isUserOnline(chat.other_user_id)">
+                            {{ chat.type === 'group' ? '👥' : (chat.other_user_name ? chat.other_user_name.charAt(0).toUpperCase() : '?') }}
+                        </div>
+
+                        <div class="chat-info">
+                            <div class="chat-main-info">
+                                <span class="chat-name">
+                                    {{ chat.type === 'group' ? (chat.name || 'Group Chat') : (chat.other_user_name || 'Unknown User') }}
+                                </span>
+                                <span class="chat-time">{{ formatTime(chat.last_message_time) }}</span>
+                            </div>
+                            <div class="chat-preview">
+                                <span class="last-message">{{ chat.last_message || 'No messages yet' }}</span>
+                                <span class="unread-count" *ngIf="chat.unread_count > 0">
+                                    {{ formatUnreadCount(chat.unread_count) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Chats State -->
+                    <div *ngIf="!isLoadingChats && chats.length === 0" class="no-chats">
+                        <div class="no-chats-icon">💬</div>
+                        <p>No conversations yet</p>
+                        <small>Start a new chat to begin messaging</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Messages View -->
+    <div *ngIf="selectedChat" class="messages-view">
+        <!-- Messages Container -->
+        <div class="messages-container" #messagesContainer>
+            <!-- Loading State -->
+            <div *ngIf="isLoadingMessages" class="loading-messages">
+                <div class="loading-spinner"></div>
+                <span>Loading messages...</span>
+            </div>
+
+            <!-- Messages -->
+            <div *ngFor="let message of messages" class="message" [class.sent]="message.sender_id === currentUser?.id"
+                [class.received]="message.sender_id !== currentUser?.id">
+
+                <div class="message-content">
+                    <div class="message-sender" *ngIf="message.sender_id !== currentUser?.id && selectedChat?.type === 'group'">
+                        {{ message.sender_name }}
+                    </div>
+                    <div class="message-bubble">
+                        <p class="message-text">{{ message.content }}</p>
+                        <div class="message-footer">
+                            <span class="message-time">{{ formatTime(message.created_at) }}</span>
+                            <span class="read-status" *ngIf="message.sender_id === currentUser?.id">
+                                <svg *ngIf="message.is_read" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                                <svg *ngIf="!message.is_read" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M21.99 8c0-.72-.37-1.35-.94-1.7L12 1 2.95 6.3C2.38 6.65 2 7.28 2 8v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2l-.01-10zM12 13L3.74 7.84 12 3l8.26 4.84L12 13z"/>
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div *ngIf="isTyping" class="typing-indicator">
+                <div class="typing-dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <span class="typing-text">
+                    {{ typingUsers.join(', ') }} {{ typingUsers.length === 1 ? 'is' : 'are' }} typing...
+                </span>
+            </div>
+
+            <!-- No Messages State -->
+            <div *ngIf="!isLoadingMessages && messages.length === 0" class="no-messages">
+                <div class="no-messages-icon">💬</div>
+                <p>No messages yet</p>
+                <small>Send a message to start the conversation</small>
+            </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="message-input-container">
+            <div class="message-input-wrapper">
+                <button class="btn-attach" title="Attach file">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                </button>
+                <textarea [(ngModel)]="newMessage" 
+                         (keydown)="onKeyPress($event)" 
+                         (input)="onInputChange()"
+                         placeholder="Type your message..."
+                         class="message-input" 
+                         rows="1" 
+                         #messageTextarea></textarea>
+                <button (click)="sendMessage()" class="btn-send" [disabled]="!newMessage.trim()" title="Send message">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employees List Modal (Overlay) -->
+    <div *ngIf="showEmployees && !selectedChat" class="modal-overlay employees-overlay" (click)="toggleEmployeesVisibility()">
+        <div class="modal-content employees-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3>
+                    <svg class="modal-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Team Members
+                </h3>
+                <button (click)="toggleEmployeesVisibility()" class="btn-close-modal" title="Close">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body employees-modal-body">
+                <!-- Employees Loading State -->
+                <div *ngIf="isLoadingEmployees" class="loading-employees-modal">
+                    <div class="loading-spinner"></div>
+                    <span>Loading team members...</span>
+                </div>
+                
+                <!-- Search Box -->
+                <div class="search-box">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    <input type="text" 
+                           placeholder="Search team members..." 
+                           [(ngModel)]="employeeSearch"
+                           (input)="onEmployeeSearchChange()">
+                    <button *ngIf="employeeSearch" (click)="clearEmployeeSearch()" class="btn-clear-search" title="Clear search">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Employees List -->
+                <div *ngIf="!isLoadingEmployees" class="employees-modal-list">
+                    <div class="employees-count-info">
+                        Showing {{ filteredEmployees.length }} of {{ employees.length }} team members
+                    </div>
+                    
+                    <div *ngIf="filteredEmployees.length === 0" class="no-employees-modal">
+                        <p>No team members found</p>
+                        <small>Try a different search term</small>
+                    </div>
+                    
+                    <div *ngFor="let employee of filteredEmployees" class="employee-modal-item" (click)="startPrivateChat(employee)">
+                        <div class="employee-avatar" [class.online]="employee.isOnline">
+                            {{ employee.name.charAt(0).toUpperCase() }}
+                        </div>
+                        <div class="employee-info">
+                            <span class="employee-name">{{ employee.name }}</span>
+                            <span class="employee-details">
+                                <span class="employee-role">{{ employee.role }}</span>
+                                <span *ngIf="employee.department" class="employee-department">• {{ employee.department }}</span>
+                            </span>
+                            <div class="employee-status">
+                                <span class="status-dot" [class.online]="employee.isOnline"></span>
+                                <span class="status-text">{{ employee.isOnline ? 'Online' : 'Offline' }}</span>
+                            </div>
+                        </div>
+                        <div class="start-chat-action">
+                            <button class="start-chat-btn" title="Start chat">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button (click)="toggleEmployeesVisibility()" class="btn btn-secondary">Close</button>
+                <button *ngIf="isManager()" (click)="showGroupCreation = true; showEmployees = false" class="btn btn-primary">
+                    Create Group
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Creation Modal -->
+    <div *ngIf="showGroupCreation" class="modal-overlay" (click)="showGroupCreation = false">
+        <div class="modal-content group-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3>
+                    <svg class="modal-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C9.38 2 7.25 4.13 7.25 6.75c0 2.57 2.01 4.65 4.63 4.74.08-.01.16-.01.22 0h.07a4.738 4.738 0 0 0 4.58-4.74C16.75 4.13 14.62 2 12 2Z"/>
+                        <path d="M17.08 14.1499C14.29 12.2899 9.73996 12.2899 6.92996 14.1499C5.65996 14.9999 4.95996 16.1499 4.95996 17.3799C4.95996 18.6099 5.65996 19.7499 6.91996 20.5899C8.31996 21.5299 10.16 21.9999 12 21.9999C13.84 21.9999 15.68 21.5299 17.08 20.5899C18.34 19.7399 19.04 18.5999 19.04 17.3599C19.03 16.1299 18.34 14.9899 17.08 14.1499Z"/>
+                        <path d="M19 8.75C20.6569 8.75 22 7.40685 22 5.75C22 4.09315 20.6569 2.75 19 2.75C17.3431 2.75 16 4.09315 16 5.75C16 7.40685 17.3431 8.75 19 8.75Z"/>
+                        <path d="M23 18.75C23.8284 18.75 24.5 18.0784 24.5 17.25C24.5 16.4216 23.8284 15.75 23 15.75C22.1716 15.75 21.5 16.4216 21.5 17.25C21.5 18.0784 22.1716 18.75 23 18.75Z"/>
+                    </svg>
+                    Create Group Chat
+                </h3>
+                <button (click)="showGroupCreation = false" class="btn-close-modal" title="Close">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Group Name *</label>
+                    <input [(ngModel)]="groupName" type="text" class="form-control" placeholder="Enter group name">
+                    <small *ngIf="!groupName.trim()" class="error-text">Group name is required</small>
+                </div>
+
+                <div class="form-group">
+                    <div class="selection-header">
+                        <label>Select Team Members *</label>
+                        <span class="selected-count" *ngIf="selectedEmployees.length > 0">
+                            {{ selectedEmployees.length }} selected
+                        </span>
+                    </div>
+                    
+                    <div *ngIf="isLoadingEmployees" class="loading-employees-modal">
+                        <div class="loading-spinner small"></div>
+                        <span>Loading team members...</span>
+                    </div>
+                    
+                    <div *ngIf="!isLoadingEmployees" class="employees-selection">
+                        <div class="search-box">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="M21 21l-4.35-4.35"/>
+                            </svg>
+                            <input type="text" placeholder="Search team members..." [(ngModel)]="employeeSearch">
+                        </div>
+                        <div class="selection-list">
+                            <div *ngIf="filteredEmployees.length === 0" class="no-employees-modal">
+                                <p>No team members available</p>
+                                <small>Check your backend API endpoint</small>
+                            </div>
+                            <div *ngFor="let employee of filteredEmployees" class="employee-selection-item"
+                                [class.selected]="selectedEmployees.includes(employee.id)"
+                                (click)="toggleEmployeeSelection(employee.id)">
+                                <div class="employee-avatar" [class.online]="employee.isOnline">
+                                    {{ employee.name.charAt(0).toUpperCase() }}
+                                </div>
+                                <div class="employee-info">
+                                    <span class="employee-name">{{ employee.name }}</span>
+                                    <span class="employee-details">
+                                        <span class="employee-role">{{ employee.role }}</span>
+                                        <span *ngIf="employee.department" class="employee-department">• {{ employee.department }}</span>
+                                    </span>
+                                </div>
+                                <div class="selection-checkbox" [class.selected]="selectedEmployees.includes(employee.id)">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                                        <path d="M20 6L9 17l-5-5"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button (click)="showGroupCreation = false" class="btn btn-secondary">Cancel</button>
+                <button (click)="createGroupChat()" class="btn btn-primary"
+                    [disabled]="!groupName.trim() || selectedEmployees.length === 0">
+                    Create Group
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

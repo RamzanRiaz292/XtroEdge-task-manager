@@ -1,0 +1,102 @@
+<div class="register-page">
+  <div class="register-card">
+    <!-- Header -->
+    <div class="register-header">
+      <div class="logo">
+        <span>👤</span>
+      </div>
+      <h1>Create Account</h1>
+      <p>Join Task Manager to manage your work efficiently</p>
+    </div>
+
+    <!-- Success Message -->
+    <div *ngIf="successMessage" class="alert alert-success">
+      <span class="alert-icon">✅</span>
+      <span>{{ successMessage }}</span>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="alert alert-error">
+      <span class="alert-icon">⚠️</span>
+      <span>{{ errorMessage }}</span>
+      <button (click)="errorMessage = ''" class="close-btn">×</button>
+    </div>
+
+    <!-- Register Form -->
+    <form (ngSubmit)="onRegister()" (input)="clearMessages()" class="register-form">
+      <div class="form-group">
+        <label for="name">Full Name *</label>
+        <input
+          type="text"
+          id="name"
+          [(ngModel)]="registerData.name"
+          name="name"
+          placeholder="Enter your full name"
+          class="form-control"
+          required>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address *</label>
+        <input
+          type="email"
+          id="email"
+          [(ngModel)]="registerData.email"
+          name="email"
+          placeholder="Enter your email"
+          class="form-control"
+          required>
+      </div>
+
+      <div class="form-group">
+        <label for="role">Account Type *</label>
+        <select
+          id="role"
+          [(ngModel)]="registerData.role"
+          name="role"
+          class="form-control">
+          <option value="employee">Employee</option>
+          <option value="manager">Manager</option>
+        </select>
+        <small class="help-text">
+          Choose "Manager" if you need to assign tasks to employees
+        </small>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password *</label>
+        <input
+          type="password"
+          id="password"
+          [(ngModel)]="registerData.password"
+          name="password"
+          placeholder="Min. 6 characters"
+          class="form-control"
+          minlength="6"
+          required>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password *</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          [(ngModel)]="registerData.confirmPassword"
+          name="confirmPassword"
+          placeholder="Confirm your password"
+          class="form-control"
+          required>
+      </div>
+
+      <button type="submit" class="btn-register" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner"></span>
+        <span>{{ isLoading ? 'Creating Account...' : 'Create Account' }}</span>
+      </button>
+    </form>
+
+    <!-- Footer -->
+    <div class="register-footer">
+      <p>Already have an account? <a [routerLink]="['/login']">Sign In</a></p>
+    </div>
+  </div>
+</div>

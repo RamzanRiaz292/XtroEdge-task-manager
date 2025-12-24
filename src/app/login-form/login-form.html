@@ -1,0 +1,73 @@
+<div class="login-page">
+  <div class="login-card">
+    <!-- Header -->
+    <div class="login-header">
+      <div class="logo">
+        <span>📋</span>
+      </div>
+      <h1>Welcome Back</h1>
+      <p>Sign in to continue to Task Manager</p>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="alert alert-danger">
+      <span class="alert-icon">⚠️</span>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Login Form -->
+    <form #loginForm="ngForm" (ngSubmit)="onLogin(loginForm)" class="login-form">
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <div class="input-wrapper">
+          <input
+            type="email"
+            id="email"
+            name="email"
+            ngModel
+            placeholder="Enter your email"
+            required>
+          <span class="input-icon">📧</span>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <input
+            [type]="inputType"
+            id="password"
+            name="password"
+            ngModel
+            placeholder="Enter your password"
+            required>
+          <span class="input-icon">🔒</span>
+          <button type="button" class="toggle-password" (click)="togglePassword()">
+            <i [class]="iconClass"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Remember Me & Forgot Password -->
+      <div class="form-options">
+        <div class="remember-me">
+          <input type="checkbox" id="rememberMe">
+          <label for="rememberMe">Remember me</label>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" class="btn-login" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner"></span>
+        <span>{{ isLoading ? 'Signing in...' : 'Sign In' }}</span>
+      </button>
+    </form>
+
+    <!-- Footer Info -->
+    <div class="login-info">
+      <p>New employees? Please contact your <strong>manager</strong> to create an account.</p>
+    </div>
+  </div>
+</div>

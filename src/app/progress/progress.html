@@ -1,0 +1,344 @@
+<div class="employee-progress-container">
+  <!-- Header Section -->
+  <div class="progress-header">
+    <div class="header-content">
+      <div class="header-main">
+        <div class="header-icon">📊</div>
+        <div class="header-text">
+          <h1>Progress Dashboard</h1>
+          <p>Track employee performance and task completion rates</p>
+        </div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button (click)="refreshData()" class="btn btn-refresh" [disabled]="isLoading">
+        <!-- <span class="btn-icon">🔄</span> -->
+        <span class="">🔄</span>
+        <span class="btn-text">{{ isLoading ? 'Loading...' : 'Refresh Data' }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Overview Statistics -->
+  <div class="overview-stats">
+    <div class="stat-card">
+      <div class="stat-icon total-employees">👥</div>
+      <div class="stat-info">
+        <h3>{{ totalEmployees }}</h3>
+        <p>Total Employees</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon completion-rate">📈</div>
+      <div class="stat-info">
+        <h3 class="progress-percentage">{{ getExactPercentage(completedTasks, totalTasks).toFixed(1) }}%</h3>
+        <p>Avg Completion Rate</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon total-tasks">📋</div>
+      <div class="stat-info">
+        <h3>{{ totalTasks }}</h3>
+        <p>Total Tasks</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon completed-tasks">✅</div>
+      <div class="stat-info">
+        <h3>{{ completedTasks }}</h3>
+        <p>Completed Tasks</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="main-content-grid">
+    <!-- Task Status Section (Left Side) -->
+    <div class="task-status-section">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="section-icon">📈</div>
+          <div>
+            <h2>Task Status Overview</h2>
+            <p>Real-time distribution of all tasks</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task Status Cards -->
+      <div class="task-status-cards">
+        <div *ngFor="let stat of taskStatusStats" class="task-status-card" [style.border-color]="stat.color">
+          <div class="status-header">
+            <div class="status-icon" [style.background]="stat.color">
+              {{ stat.icon }}
+            </div>
+            <div class="status-info">
+              <h4>{{ stat.status }}</h4>
+              <div class="status-details">
+                <span class="status-percentage">{{ stat.percentage.toFixed(1) }}%</span>
+                <span class="status-count">{{ stat.count }} tasks</span>
+              </div>
+            </div>
+          </div>
+          <div class="status-progress">
+            <div class="progress-track">
+              <div class="progress-fill" 
+                   [style.width.%]="stat.percentage"
+                   [style.background]="stat.color"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overall Progress -->
+      <div class="overall-progress">
+        <div class="progress-circle-container">
+          <div class="circular-progress overall">
+            <div class="progress-ring">
+              <svg width="140" height="140">
+                <circle class="progress-ring-background" cx="70" cy="70" r="60"></circle>
+                <!-- Multi-color progress circle -->
+                <circle class="progress-ring-circle completed" 
+                        cx="70" cy="70" r="60"
+                        [style.stroke-dasharray]="'376.991 ' + (376.991 - (376.991 * getExactPercentage(completedTasks, totalTasks) / 100))">
+                </circle>
+                <circle class="progress-ring-circle in-progress" 
+                        cx="70" cy="70" r="60"
+                        [style.stroke-dasharray]="'376.991 ' + (376.991 - (376.991 * getExactPercentage(inProgressTasks, totalTasks) / 100))"
+                        [style.stroke-dashoffset]="' -' + (376.991 - (376.991 * getExactPercentage(completedTasks, totalTasks) / 100))">
+                </circle>
+                <circle class="progress-ring-circle pending" 
+                        cx="70" cy="70" r="60"
+                        [style.stroke-dasharray]="'376.991 ' + (376.991 - (376.991 * getExactPercentage(pendingTasks, totalTasks) / 100))"
+                        [style.stroke-dashoffset]="' -' + (376.991 - (376.991 * (getExactPercentage(completedTasks, totalTasks) + getExactPercentage(inProgressTasks, totalTasks)) / 100))">
+                </circle>
+              </svg>
+            </div>
+            <div class="progress-content">
+              <span class="progress-percentage">{{ getExactPercentage(completedTasks, totalTasks).toFixed(1) }}%</span>
+              <span class="progress-label">Overall Progress</span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-breakdown">
+          <h4>Task Breakdown</h4>
+          <div class="breakdown-stats">
+            <div class="breakdown-item pending">
+              <span class="breakdown-icon">⏳</span>
+              <div class="breakdown-info">
+                <span class="breakdown-count">{{ pendingTasks }}</span>
+                <span class="breakdown-label">Pending</span>
+              </div>
+            </div>
+            <div class="breakdown-item in-progress">
+              <span class="breakdown-icon">🔄</span>
+              <div class="breakdown-info">
+                <span class="breakdown-count">{{ inProgressTasks }}</span>
+                <span class="breakdown-label">In Progress</span>
+              </div>
+            </div>
+            <div class="breakdown-item completed">
+              <span class="breakdown-icon">✅</span>
+              <div class="breakdown-info">
+                <span class="breakdown-count">{{ completedTasks }}</span>
+                <span class="breakdown-label">Completed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee Progress Section (Right Side) -->
+    <div class="employee-progress-section">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="section-icon">👨‍💼</div>
+          <div>
+            <h2>Employee Performance</h2>
+            <p>Individual task completion rates</p>
+          </div>
+        </div>
+        <div class="section-controls">
+          <div class="filter-group">
+            <label for="monthFilter">Filter by Month:</label>
+            <select id="monthFilter" [(ngModel)]="selectedMonth" (change)="filterByMonth()" class="form-control">
+              <option value="all">All Months</option>
+              <option *ngFor="let month of ['January', 'February', 'March', 'April', 'May', 'June', 
+                                            'July', 'August', 'September', 'October', 'November', 'December']" 
+                      [value]="month">
+                {{ month }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading employee progress data...</p>
+      </div>
+
+      <!-- Employee Progress Grid -->
+      <div *ngIf="!isLoading && filteredEmployees.length > 0" class="progress-grid">
+        <div *ngFor="let employee of filteredEmployees" 
+             class="employee-progress-card"
+             [class.selected]="selectedEmployee?.id === employee.id"
+             (click)="selectEmployee(employee)">
+          
+          <!-- Multi-color Circular Progress Bar -->
+          <div class="progress-circle-container">
+            <div class="circular-progress" [ngClass]="getProgressClass(employee.completion_rate)">
+              <div class="progress-ring">
+                <svg width="100" height="100">
+                  <circle class="progress-ring-background" cx="50" cy="50" r="45"></circle>
+                  <!-- Completed tasks - GREEN -->
+                  <circle class="progress-ring-circle completed" 
+                          cx="50" cy="50" r="45"
+                          [style.stroke-dasharray]="'282.743 ' + (282.743 - (282.743 * (employee.completed_tasks / employee.total_tasks) * 100 / 100))">
+                  </circle>
+                  <!-- In Progress tasks - BLUE -->
+                  <circle class="progress-ring-circle in-progress" 
+                          cx="50" cy="50" r="45"
+                          [style.stroke-dasharray]="'282.743 ' + (282.743 - (282.743 * (employee.in_progress_tasks / employee.total_tasks) * 100 / 100))"
+                          [style.stroke-dashoffset]="' -' + (282.743 - (282.743 * (employee.completed_tasks / employee.total_tasks) * 100 / 100))">
+                  </circle>
+                  <!-- Pending tasks - RED -->
+                  <circle class="progress-ring-circle pending" 
+                          cx="50" cy="50" r="45"
+                          [style.stroke-dasharray]="'282.743 ' + (282.743 - (282.743 * (employee.pending_tasks / employee.total_tasks) * 100 / 100))"
+                          [style.stroke-dashoffset]="' -' + (282.743 - (282.743 * ((employee.completed_tasks + employee.in_progress_tasks) / employee.total_tasks) * 100 / 100))">
+                  </circle>
+                </svg>
+              </div>
+              <div class="progress-content">
+                <span class="progress-percentage">{{ employee.completion_rate }}%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employee Info -->
+          <div class="employee-info">
+            <h3 class="employee-name">{{ employee.name }}</h3>
+            <p class="employee-email">{{ employee.email }}</p>
+          </div>
+
+          <!-- Task Statistics -->
+          <div class="task-statistics">
+            <div class="stat-item completed">
+              <span class="stat-icon">✅</span>
+              <span class="stat-count">{{ employee.completed_tasks }}</span>
+              <span class="stat-label">Done</span>
+            </div>
+            <div class="stat-item in-progress">
+              <span class="stat-icon">🔄</span>
+              <span class="stat-count">{{ employee.in_progress_tasks }}</span>
+              <span class="stat-label">Progress</span>
+            </div>
+            <div class="stat-item pending">
+              <span class="stat-icon">⏳</span>
+              <span class="stat-count">{{ employee.pending_tasks }}</span>
+              <span class="stat-label">Pending</span>
+            </div>
+          </div>
+
+          <!-- Total Tasks -->
+          <div class="total-tasks">
+            <span class="total-count">{{ employee.total_tasks }}</span>
+            <span class="total-label">Total Tasks</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && filteredEmployees.length === 0" class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h3>No Employee Data Found</h3>
+        <p>No employee progress data available for the selected filters.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected Employee Details Modal -->
+  <div *ngIf="selectedEmployee" class="modal-overlay" (click)="selectedEmployee = null">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <div class="modal-icon">📈</div>
+          <div>
+            <h2>{{ selectedEmployee.name }}</h2>
+            <p>Detailed Performance Analytics</p>
+          </div>
+        </div>
+        <button class="close-btn" (click)="selectedEmployee = null">×</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Large Multi-color Circular Progress -->
+        <div class="detail-progress-circle">
+          <div class="circular-progress large" [ngClass]="getProgressClass(selectedEmployee.completion_rate)">
+            <div class="progress-ring">
+              <svg width="180" height="180">
+                <circle class="progress-ring-background" cx="90" cy="90" r="80"></circle>
+                <!-- Completed tasks - GREEN -->
+                <circle class="progress-ring-circle completed" 
+                        cx="90" cy="90" r="80"
+                        [style.stroke-dasharray]="'502.655 ' + (502.655 - (502.655 * (selectedEmployee.completed_tasks / selectedEmployee.total_tasks) * 100 / 100))">
+                </circle>
+                <!-- In Progress tasks - BLUE -->
+                <circle class="progress-ring-circle in-progress" 
+                        cx="90" cy="90" r="80"
+                        [style.stroke-dasharray]="'502.655 ' + (502.655 - (502.655 * (selectedEmployee.in_progress_tasks / selectedEmployee.total_tasks) * 100 / 100))"
+                        [style.stroke-dashoffset]="' -' + (502.655 - (502.655 * (selectedEmployee.completed_tasks / selectedEmployee.total_tasks) * 100 / 100))">
+                </circle>
+                <!-- Pending tasks - RED -->
+                <circle class="progress-ring-circle pending" 
+                        cx="90" cy="90" r="80"
+                        [style.stroke-dasharray]="'502.655 ' + (502.655 - (502.655 * (selectedEmployee.pending_tasks / selectedEmployee.total_tasks) * 100 / 100))"
+                        [style.stroke-dashoffset]="' -' + (502.655 - (502.655 * ((selectedEmployee.completed_tasks + selectedEmployee.in_progress_tasks) / selectedEmployee.total_tasks) * 100 / 100))">
+                </circle>
+              </svg>
+            </div>
+            <div class="progress-content">
+              <span class="progress-percentage">{{ selectedEmployee.completion_rate }}%</span>
+              <span class="progress-label">Completion Rate</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Statistics -->
+        <div class="detailed-stats">
+          <div class="detailed-stat total">
+            <div class="stat-icon">📋</div>
+            <div class="stat-info">
+              <span class="stat-value">{{ selectedEmployee.total_tasks }}</span>
+              <span class="stat-label">Total Tasks</span>
+            </div>
+          </div>
+          <div class="detailed-stat completed">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <span class="stat-value">{{ selectedEmployee.completed_tasks }}</span>
+              <span class="stat-label">Completed</span>
+            </div>
+          </div>
+          <div class="detailed-stat in-progress">
+            <div class="stat-icon">🔄</div>
+            <div class="stat-info">
+              <span class="stat-value">{{ selectedEmployee.in_progress_tasks }}</span>
+              <span class="stat-label">In Progress</span>
+            </div>
+          </div>
+          <div class="detailed-stat pending">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-info">
+              <span class="stat-value">{{ selectedEmployee.pending_tasks }}</span>
+              <span class="stat-label">Pending</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

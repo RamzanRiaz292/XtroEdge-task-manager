@@ -1,0 +1,10 @@
+<!-- <app-todo-list></app-todo-list> -->
+<!-- Add to your index.html head for free icons -->
+<link rel="icon" type="image/x-icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔔</text></svg>">
+    <app-chat *ngIf="isManager" [currentUser]="currentUser"></app-chat>
+<router-outlet />
+
+
+<!-- Add this line at the end -->
+<!-- <app-chat [position]="'right'" app-chat> -->

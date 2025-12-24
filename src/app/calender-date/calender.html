@@ -1,0 +1,292 @@
+<div class="calendar-container">
+  <!-- Header -->
+  <div class="header-bar">
+    <div class="header-content">
+      <h1>
+        <span>📅</span>
+        <span>Task Calendar</span>
+      </h1>
+      <div class="user-info">
+        <span>Welcome, {{ user?.name }} ({{ user?.role }})</span>
+        <button (click)="logout()" class="btn btn-logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar Controls -->
+  <div class="calendar-controls">
+    <div class="controls-left">
+      <button (click)="previousMonth()" class="btn btn-outline">
+        ◀ Previous
+      </button>
+      <h2 class="month-year">{{ getMonthYear() }}</h2>
+      <button (click)="nextMonth()" class="btn btn-outline">
+        Next ▶
+      </button>
+    </div>
+    <div class="controls-right">
+      <button (click)="goToToday()" class="btn btn-primary">
+        Today
+      </button>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="calendar-stats">
+    <div class="stat-card">
+      <div class="stat-icon">📋</div>
+      <div class="stat-info">
+        <h3>Total Tasks This Month</h3>
+        <span class="stat-number">{{ totalTasksCount }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-info">
+        <h3>Completed Tasks</h3>
+        <span class="stat-number">{{ completedTasksCount }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⏰</div>
+      <div class="stat-info">
+        <h3>Pending Tasks</h3>
+        <span class="stat-number">{{ pendingTasksCount }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar Grid -->
+  <div class="calendar-grid">
+    <!-- Week Days Header -->
+    <div class="week-days">
+      <div class="week-day">Sunday</div>
+      <div class="week-day">Monday</div>
+      <div class="week-day">Tuesday</div>
+      <div class="week-day">Wednesday</div>
+      <div class="week-day">Thursday</div>
+      <div class="week-day">Friday</div>
+      <div class="week-day">Saturday</div>
+    </div>
+
+    <!-- Calendar Days -->
+    <div class="calendar-days">
+      <div *ngFor="let day of days" class="calendar-day" [class.other-month]="!isCurrentMonth(day)"
+        [class.today]="isToday(day)" [class.sunday]="isSunday(day)"
+        [class.has-events]="getEventsForDate(day).length > 0" [class.has-holiday]="getHolidayForDate(day)">
+
+        <div class="day-header">
+          <span class="day-number">{{ day.getDate() }}</span>
+          <span *ngIf="isToday(day)" class="today-badge">Today</span>
+          <span *ngIf="isSunday(day) && !getHolidayForDate(day)" class="sunday-badge">Holiday</span>
+        </div>
+
+        <!-- Holiday Display -->
+        <div *ngIf="getHolidayForDate(day)" class="holiday-indicator"
+          [class.extra-duty]="getHolidayForDate(day)?.type === 'extra_duty'">
+          {{ getHolidayForDate(day)?.type === 'extra_duty' ? '📞 Extra Duty' : '🎉 Holiday' }}
+        </div>
+
+        <!-- Events Display -->
+        <div class="day-events">
+          <div *ngFor="let event of getEventsForDate(day)" class="event-item"
+            [ngClass]="getPriorityClass(event.priority)">
+            <div class="event-content">
+              <div class="event-title">{{ event.title }}</div>
+              <div class="event-time">{{ event.start | date:'shortTime' }}</div>
+              <div class="event-status" [ngClass]="getStatusClass(event.status)">
+                {{ event.status }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task Counter -->
+        <div *ngIf="getEventsForDate(day).length > 0" class="task-counter">
+          {{ getEventsForDate(day).length }} task(s)
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="day-actions">
+          <button *ngIf="user?.role === 'manager'" class="btn-holiday" (click)="openHolidayModal(day)"
+            title="Add Holiday/Extra Duty">
+            📝
+          </button>
+          <button class="btn-history" (click)="viewTaskHistory(day)" title="View Task History">
+            📊
+          </button>
+        </div>
+
+        <div *ngIf="getEventsForDate(day).length === 0 && !getHolidayForDate(day)" class="no-events">
+          No tasks
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="calendar-legend">
+    <div class="legend-section">
+      <h3>📊 Task Status</h3>
+      <div class="legend-items">
+        <div class="legend-item">
+          <div class="legend-color status-pending"></div>
+          <span>Pending</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color status-in-progress"></div>
+          <span>In Progress</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color status-completed"></div>
+          <span>Completed</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color status-overdue"></div>
+          <span>Overdue</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend-section">
+      <h3>🎯 Priority Levels</h3>
+      <div class="legend-items">
+        <div class="legend-item">
+          <div class="legend-color priority-high"></div>
+          <span>High Priority</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color priority-medium"></div>
+          <span>Medium Priority</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color priority-low"></div>
+          <span>Low Priority</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend-section">
+      <h3>🎉 Special Days</h3>
+      <div class="legend-items">
+        <div class="legend-item">
+          <div class="legend-color holiday"></div>
+          <span>Holiday</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color extra-duty"></div>
+          <span>Extra Duty</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color sunday"></div>
+          <span>Sunday</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Holiday/Extra Duty Modal -->
+  <div *ngIf="showHolidayModal" class="modal-overlay" (click)="closeHolidayModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Add Holiday/Extra Duty - {{ selectedDate | date:'fullDate' }}</h3>
+        <button class="close-btn" (click)="closeHolidayModal()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="holidayType">Type *</label>
+          <select id="holidayType" [(ngModel)]="holidayForm.type" class="form-control">
+            <option value="holiday">🎉 Holiday</option>
+            <option value="extra_duty">📞 Extra Duty</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="holidayTitle">Title *</label>
+          <input type="text" id="holidayTitle" [(ngModel)]="holidayForm.title" class="form-control"
+            placeholder="Enter title (e.g., Public Holiday, Team Meeting)">
+        </div>
+
+        <div class="form-group">
+          <label for="holidayDescription">Description</label>
+          <textarea id="holidayDescription" [(ngModel)]="holidayForm.description" class="form-control"
+            placeholder="Add description..." rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" (click)="saveHoliday()" [disabled]="!holidayForm.title">
+          💾 Save
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="closeHolidayModal()">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task History Modal -->
+  <div *ngIf="showTaskHistoryModal" class="modal-overlay" (click)="closeTaskHistoryModal()">
+    <div class="modal large-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Task History - {{ selectedDate | date:'fullDate' }}</h3>
+        <button class="close-btn" (click)="closeTaskHistoryModal()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div *ngIf="taskHistory.length === 0" class="empty-state">
+          <p>No tasks found for this date.</p>
+        </div>
+
+        <div *ngFor="let history of taskHistory" class="employee-history">
+          <div class="employee-header">
+            <h4>{{ history.employee_name }}</h4>
+            <span class="total-tasks">{{ history.total_tasks }} tasks</span>
+          </div>
+
+          <div class="tasks-list">
+            <div *ngFor="let task of history.tasks" class="task-item" [ngClass]="getPriorityClass(task.priority)">
+              <div class="task-details">
+                <div class="task-title">{{ task.title }}</div>
+                <div class="task-meta">
+                  <span class="task-status" [ngClass]="getStatusClass(task.status)">
+                    {{ task.status }}
+                  </span>
+                  <span class="task-time" *ngIf="task.start">
+                    {{ task.start | date:'shortTime' }}
+                  </span>
+                  <span class="task-progress" *ngIf="getTaskProgress(task) > 0">
+                    {{ getTaskProgress(task) }}% complete
+                  </span>
+                </div>
+                <div class="task-description" *ngIf="hasDescription(task)"
+                  style="font-size: 12px; color: #666; margin-top: 5px;">
+                  {{ getDescription(task) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeTaskHistoryModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="events.length === 0" class="empty-state">
+    <div class="loading-spinner"></div>
+    <p>Loading calendar events...</p>
+  </div>
+</div>
